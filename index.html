@@ -896,14 +896,16 @@
                 return;
             }
 
-            if (timeLeft > 330) {
-                alert(`⚠️ 請在倒數最後 2 分鐘內再使用提示！\n(剩餘提示次數：${hintsRemaining})`);
-                return;
-            }
+            // --- 修改前 ---
+            // if (!solution || !solution[0]) {
+            //     alert("無法生成提示，請確認盤面狀態。");
+            //     return;
+            // }
 
-            if (!solution || !solution[0]) {
-                alert("無法生成提示，請確認盤面狀態。");
-                return;
+            // --- 修改後 ---
+            if (!solution || !solution.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null)) {
+               alert("無法生成提示，請確認盤面狀態。");
+               return;
             }
 
             let targetIdx = -1;
@@ -940,4 +942,5 @@
         }
     </script>
 </body>
+
 </html>

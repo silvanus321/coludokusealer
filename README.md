@@ -1,4 +1,4 @@
-coludoku:sealer game
+Coludoku:Sealer game
 
 ​Note on Intellectual Property The software code in this repository is licensed under the MIT License. However, the Coludoku (色獨) game mechanics, name, logo, and all image assets (files in the /images folder) are trademarks and copyright of Formosa Force Games (福爾摩莎戰棋社). You may NOT use these assets for commercial purposes without permission.
 

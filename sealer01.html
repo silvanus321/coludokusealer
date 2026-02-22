@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>色獨封印師 (8.0 終極大師版)</title>
+    <style>
+        /* --- 1. 基礎設定 --- */
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
+        .header-box { position: relative; width: 100%; max-width: 400px; text-align: center; margin: 10px 0; }
+        h1 { margin: 0; letter-spacing: 2px; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: inline-block; }
+
+        /* --- 2. HUD & 時間條 --- */
+        .hud { display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.1); padding: 10px 15px; border-radius: 50px; margin-bottom: 5px; box-sizing: border-box; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); align-items: center; text-align: center; }
+        .hud-item { font-weight: bold; font-size: 0.85rem; }
+        .hud-val { color: #f1c40f; display: block; font-family: monospace; font-size: 1.2rem; }
+        .hud-val.urgent { color: #e74c3c; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .time-bar-container { width: 100%; max-width: 380px; height: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; margin-bottom: 15px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1); }
+        .time-bar-fill { height: 100%; width: 100%; background-color: #3498db; transition: width 1s linear, background-color 0.3s ease; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .time-bar-fill.state-purple { background-color: #9b59b6; box-shadow: 0 0 15px #8e44ad, 0 0 5px #fff; animation: electric 0.2s infinite alternate; }
+        .time-bar-fill.state-blue { background-color: #3498db; box-shadow: 0 0 5px #2980b9; }
+        .time-bar-fill.state-red { background-color: #c0392b; box-shadow: 0 0 15px #e74c3c; animation: shakeBar 0.5s infinite; }
+        @keyframes electric { 0% { opacity: 1; box-shadow: 0 0 15px #8e44ad; } 100% { opacity: 0.8; box-shadow: 0 0 25px #d2b4de; } }
+        @keyframes shakeBar { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1px); opacity: 0.8; } 75% { transform: translateX(1px); opacity: 1; } }
+
+        .level-info { margin-top: 5px; font-size: 0.9rem; color: #f1c40f; min-height: 20px; font-weight: bold; text-align: center;}
+        .instruction-bar { font-size: 0.85rem; color: #bdc3c7; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; margin-bottom: 10px; white-space: nowrap; text-align: center; }
+
+        /* --- 3. 遊戲區 --- */
+        .game-container { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        .main-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background-color: #34495e; padding: 10px; border-radius: 12px; width: 100%; aspect-ratio: 1 / 1; box-sizing: border-box; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .main-grid.win-glow { box-shadow: 0 0 30px 10px rgba(241, 196, 15, 0.6); border: 2px solid #f1c40f; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 15px 5px rgba(241, 196, 15, 0.4); } 50% { box-shadow: 0 0 30px 15px rgba(241, 196, 15, 0.8); } }
+
+        .block { background-color: #ecf0f1; border: 2px solid transparent; position: relative; border-radius: 6px; overflow: hidden; display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .block.fixed { border-color: #c0392b; background-color: #fadbd8; }
+        .block.user-placed { border-color: #2980b9; }
+
+        .block-image { width: 100%; height: 100%; object-fit: contain; transition: transform 0.2s ease; }
+        .empty-slot { background-color: rgba(0,0,0,0.2); color: #7f8c8d; font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.1); border-radius: 6px; position: relative; overflow: hidden; }
+        
+        .zone-edge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 11; }
+        .zone-center { position: absolute; top: 20%; left: 20%; width: 60%; height: 60%; z-index: 12; border-radius: 50%; }
+
+        /* 光暈層 */
+        .glow-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; border-radius: 12px; overflow: hidden; }
+        .glow-bar { position: absolute; box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; transition: opacity 0.3s; }
+        .glow-row { left: 1%; width: 98%; height: 31%; background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
+        .glow-col { top: 1%; height: 98%; width: 31%; background: linear-gradient(to right, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
+
+        /* 糾錯警告動畫 */
+        @keyframes pulseRed { 0%, 100% { box-shadow: inset 0 0 10px rgba(231,76,60,0.5); border-color: #c0392b; } 50% { box-shadow: inset 0 0 20px rgba(231,76,60,0.9); border-color: #e74c3c; } }
+
+        /* --- 4. 選單與按鈕 --- */
+        .action-btn { background-color: #27ae60; color: white; border: none; padding: 15px 40px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; margin-top: 25px; width: 80%; transition: all 0.2s; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .action-btn:active { transform: scale(0.95); }
+        .button-group { display: flex; justify-content: space-between; width: 100%; margin-top: 20px; gap: 10px; }
+        .action-btn.btn-reset { background-color: #16a085; font-size: 1rem; padding: 10px; flex: 1; margin-top: 0; }
+        .action-btn.btn-reset:hover { background-color: #1abc9c; }
+        .action-btn.btn-hint { background-color: #f39c12; font-size: 1rem; padding: 10px; flex: 1; margin-top: 0; }
+        .action-btn.btn-hint:hover { background-color: #e67e22; }
+        .action-btn.btn-hint:disabled { background-color: #7f8c8d !important; cursor: not-allowed; box-shadow: none; }
+        .action-btn.give-up { background-color: #7f8c8d; font-size: 1rem; padding: 10px; flex: 1; margin-top: 0; }
+        .action-btn.give-up:hover { background-color: #95a5a6; }
+        .action-btn.failed { background-color: #c0392b; cursor: not-allowed; }
+
+        /* 等級選擇鈕 */
+        .lvl-btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 300px; margin: 20px auto; }
+        .lvl-btn { background: #34495e; border: 2px solid #bdc3c7; color: #ecf0f1; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 1rem;}
+        .lvl-btn small { font-size: 0.75rem; color: #95a5a6; display: block; margin-top: 4px; font-weight: normal;}
+        .lvl-btn.active { background: #f1c40f; border-color: #f39c12; color: #2c3e50; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
+        .lvl-btn.active small { color: #555; }
+        .name-input { padding: 15px; border-radius: 10px; border: none; font-size: 1.2rem; width: 70%; text-align: center; margin-bottom: 20px; background: rgba(255,255,255,0.9); }
+
+        /* --- 5. 彈窗與結算 --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); overflow-y: auto; }
+        .modal-content { background: white; color: #333; padding: 25px; border-radius: 15px; width: 95%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
+        
+        .picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .picker-item { border: 1px solid #ddd; border-radius: 8px; padding: 5px; cursor: pointer; }
+        .picker-item img { width: 100%; }
+
+        .percentile-box { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin: 8px auto 0; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
+        
+        /* 排行榜 */
+        .level-boards-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; width: 100%;}
+        .level-board { background: #fff; border: 2px solid #ecf0f1; border-radius: 10px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
+        .level-board-title { font-weight: bold; color: #2980b9; text-align: center; margin-bottom: 5px; border-bottom: 2px solid #3498db; padding-bottom: 4px; font-size: 0.9rem;}
+        
+        .lb-mini-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left; }
+        .lb-mini-table td { padding: 5px 2px; border-bottom: 1px dashed #ecf0f1; vertical-align: middle; }
+        .lb-mini-table tr:last-child td { border-bottom: none; }
+        .lb-mini-table .rank { font-weight: bold; color: #f39c12; width: 15px; text-align: center;}
+        .lb-mini-table .name { font-weight: bold; color: #34495e; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lb-mini-table .score-time { text-align: right; color: #7f8c8d; font-family: monospace; line-height: 1.2;}
+        .lb-mini-table .hint-icon { color: #f39c12; font-size: 0.8rem; }
+
+        #start-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: #2c3e50; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .intro-box { text-align: center; padding: 20px; width: 100%; box-sizing: border-box;}
+        .intro-title { font-size: 2.5rem; color: #f1c40f; margin-bottom: 10px; letter-spacing: 3px; }
+        .intro-desc { font-size: 1.1rem; color: #ecf0f1; margin-bottom: 20px; line-height: 1.8; }
+
+        /* --- 教學專屬特效 --- */
+        .tut-highlight-blue { border: 3px dashed #3498db !important; animation: pulseBlue 1.5s infinite; background-color: rgba(52, 152, 219, 0.2); }
+        .tut-highlight-yellow { box-shadow: 0 0 15px 5px #f1c40f; border: 2px solid #f1c40f !important; animation: pulseYellow 1.5s infinite; }
+        @keyframes pulseBlue { 0%, 100% { box-shadow: 0 0 5px #3498db; } 50% { box-shadow: 0 0 15px #3498db; } }
+        @keyframes pulseYellow { 0%, 100% { box-shadow: 0 0 5px #f1c40f; } 50% { box-shadow: 0 0 20px #f1c40f; } }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="intro-box">
+            <div class="intro-title">🔮色獨封印師🔮</div>
+            <div class="intro-desc"><strong>行列寶石相異，完成色獨封印</strong></div>
+            <div class="lvl-btn-group">
+                <button class="lvl-btn active" onclick="selectLevel(1, this)">LEVEL 1<br><small>Shape 01-12</small></button>
+                <button class="lvl-btn" onclick="selectLevel(2, this)">LEVEL 2<br><small>Shape 13-24</small></button>
+                <button class="lvl-btn" onclick="selectLevel(3, this)">LEVEL 3<br><small>Shape 25-36</small></button>
+                <button class="lvl-btn" onclick="selectLevel(4, this)">LEVEL 4<br><small>Shape 37-48</small></button>
+                <button class="lvl-btn" onclick="selectLevel(5, this)">LEVEL 5<br><small>Shape 49-60</small></button>
+                <button class="lvl-btn" onclick="selectLevel(6, this)">LEVEL 6<br><small>Shape 61-72</small></button>
+            </div>
+            
+            <div style="margin: 15px auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(52, 152, 219, 0.5); width: 80%; max-width: 300px;">
+                <label style="color: #ecf0f1; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <input type="checkbox" id="assist-mode-toggle" style="transform: scale(1.3);"> 
+                    🛡️ 輔助精靈 (每30秒排除1顆錯誤魔石)
+                </label>
+            </div>
+
+            <input type="text" id="player-name" class="name-input" placeholder="請輸入封印師名號" maxlength="10">
+            <button class="action-btn" onclick="startGame()" style="margin-top: 0;">開始挑戰</button>
+            <button class="action-btn btn-reset" onclick="playIntroTutorial()" style="margin-top: 15px; width: 70%; background-color: #8e44ad;">📖 新手引導</button>
+        </div>
+    </div>
+
+    <div class="header-box"><h1 id="game-title">Round 1</h1></div>
+    
+    <div class="hud">
+        <div class="hud-item">關卡 <span id="round-disp" class="hud-val">1/6</span></div>
+        <div class="hud-item">倒數 <span id="timer-disp" class="hud-val">04:00</span></div>
+        <div class="hud-item">得分 <span id="score-disp" class="hud-val">0</span></div>
+    </div>
+
+    <div class="time-bar-container"><div id="time-bar-fill" class="time-bar-fill"></div></div>
+
+    <div class="game-container">
+        <div class="level-info" id="level-info"></div>
+        <div id="intro-tut-msg" style="display:none; background: rgba(0,0,0,0.85); color: #ecf0f1; padding: 15px; text-align: left; font-size: 1rem; border-radius: 10px; border: 2px solid #3498db; margin-bottom: 10px; width: 100%; box-sizing: border-box; line-height: 1.6; z-index: 50;"></div>
+
+        <div class="instruction-bar">👆輕點中間翻面 | 🔄輕點邊緣旋轉 | 🗑️長按中間移除</div>
+        <div id="grid-container" class="main-grid"></div>
+        <button id="btn-next" class="action-btn" style="display:none;" onclick="nextLevel()">下一關 ➡️</button>
+        
+        <div id="action-controls" class="button-group">
+            <button id="btn-reset" class="action-btn btn-reset" onclick="resetLevel()">🔄 重置</button>
+            <button id="btn-hint" class="action-btn btn-hint" onclick="provideHint()">💡 提示</button>
+            <button id="btn-solve" class="action-btn give-up" onclick="forceSolve(true)">🏳️ 放棄</button>
+        </div>
+    </div>
+
+    <div id="picker-modal" class="modal-overlay" onclick="closePicker()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="picker-title">選擇魔石 (B面)</h3>
+            <div id="picker-grid" class="picker-grid"></div>
+            <div style="margin-top:15px; display:flex; justify-content:center; gap:10px;">
+                <button onclick="togglePickerFace()" style="padding:10px 20px; background:#9b59b6; color:white; border:none; border-radius:20px; font-weight:bold;">🔄 翻面</button>
+                <button onclick="closePicker()" style="padding:10px 20px; background:#ddd; border:none; border-radius:20px;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="end-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="background:#f4f6f7; padding:15px 10px; border-radius:10px; margin-bottom:15px;">
+                <div style="font-size:1.1rem; color:#2c3e50; font-weight:bold; margin-bottom: 5px;" id="end-player-name"></div>
+                <div style="font-size:0.9rem; color:#8e44ad; font-weight:bold; margin-bottom: 10px;" id="end-title-desc"></div>
+                
+                <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
+                    <div>得分 <span id="end-score" style="color:#27ae60; font-weight:bold; font-size:1.1rem;">0</span></div>
+                    <div>💡保留 <span id="end-hints" style="color:#f39c12; font-weight:bold; font-size:1.1rem;">0</span></div>
+                    <div>耗時 <span id="end-time" style="color:#e67e22; font-weight:bold; font-size:1.1rem;">00:00</span></div>
+                </div>
+                <div class="percentile-box" id="end-percentile">🏆 擊敗了全服 100% 的玩家</div>
+            </div>
+
+            <div class="level-boards-container" id="level-boards"></div>
+            <button class="action-btn" style="margin-top:20px; padding:10px 30px;" onclick="location.reload()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM 簡寫助手 ---
+        const $ = id => document.getElementById(id);
+
+        // --- 0. 音效系統 ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(), gainNode = audioCtx.createGain(), now = audioCtx.currentTime;
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+            if (type === 'action') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'line') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(1200, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            } else if (type === 'win') {
+                playNote(523.25, now, 0.1); playNote(659.25, now + 0.1, 0.1); playNote(783.99, now + 0.2, 0.4); 
+            } else if (type === 'bonus') {
+                playNote(880, now, 0.1); playNote(1760, now + 0.1, 0.2); 
+            } else if (type === 'reset') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            }
+        }
+        function playNote(freq, time, dur) {
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'square'; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + dur);
+            osc.start(time); osc.stop(time + dur);
+        }
+
+        // --- 1. 資料庫 ---
+        const BLOCKS={1:{B:[[1,2],[3,4]],W:[[5,6],[3,4]]},2:{B:[[4,6],[3,5]],W:[[2,6],[1,5]]},3:{B:[[2,1],[6,5]],W:[[3,4],[1,2]]},4:{B:[[5,2],[6,3]],W:[[4,1],[5,2]]},5:{B:[[4,5],[1,2]],W:[[3,4],[6,1]]},6:{B:[[1,4],[6,3]],W:[[6,3],[5,2]]},7:{B:[[1,6],[5,4]],W:[[2,3],[6,1]]},8:{B:[[2,6],[3,1]],W:[[2,4],[3,5]]},9:{B:[[2,3],[4,5]],W:[[6,1],[4,5]]}};
+        const TARGET_TILES=[{id:1,blocks:[{id:1,f:'B'},{id:5,f:'B'},{id:9,f:'B'}]},{id:2,blocks:[{id:2,f:'B'},{id:6,f:'B'},{id:7,f:'B'}]},{id:3,blocks:[{id:3,f:'B'},{id:4,f:'B'},{id:8,f:'B'}]},{id:4,blocks:[{id:3,f:'B'},{id:5,f:'B'},{id:7,f:'B'}]},{id:5,blocks:[{id:1,f:'B'},{id:6,f:'B'},{id:8,f:'B'}]},{id:6,blocks:[{id:2,f:'B'},{id:4,f:'B'},{id:9,f:'B'}]},{id:7,blocks:[{id:1,f:'B'},{id:5,f:'B'},{id:8,f:'W'}]},{id:8,blocks:[{id:2,f:'B'},{id:9,f:'B'},{id:6,f:'W'}]},{id:9,blocks:[{id:6,f:'B'},{id:1,f:'W'},{id:7,f:'B'}]},{id:10,blocks:[{id:9,f:'W'},{id:3,f:'B'},{id:4,f:'W'}]},{id:11,blocks:[{id:2,f:'W'},{id:7,f:'W'},{id:4,f:'B'}]},{id:12,blocks:[{id:5,f:'W'},{id:3,f:'W'},{id:8,f:'B'}]},{id:13,blocks:[{id:5,f:'B'},{id:3,f:'B'},{id:9,f:'W'}]},{id:14,blocks:[{id:1,f:'B'},{id:5,f:'W'},{id:8,f:'B'}]},{id:15,blocks:[{id:4,f:'B'},{id:8,f:'B'},{id:2,f:'W'}]},{id:16,blocks:[{id:3,f:'B'},{id:6,f:'W'},{id:7,f:'W'}]},{id:17,blocks:[{id:9,f:'W'},{id:6,f:'B'},{id:1,f:'W'}]},{id:18,blocks:[{id:4,f:'W'},{id:2,f:'W'},{id:7,f:'B'}]},{id:19,blocks:[{id:3,f:'B'},{id:4,f:'B'},{id:7,f:'W'}]},{id:20,blocks:[{id:9,f:'B'},{id:4,f:'W'},{id:1,f:'B'}]},{id:21,blocks:[{id:7,f:'B'},{id:5,f:'B'},{id:2,f:'W'}]},{id:22,blocks:[{id:6,f:'W'},{id:8,f:'W'},{id:2,f:'B'}]},{id:23,blocks:[{id:5,f:'B'},{id:8,f:'W'},{id:3,f:'W'}]},{id:24,blocks:[{id:1,f:'W'},{id:9,f:'B'},{id:6,f:'W'}]},{id:25,blocks:[{id:2,f:'B'},{id:6,f:'B'},{id:9,f:'W'}]},{id:26,blocks:[{id:7,f:'B'},{id:4,f:'W'},{id:3,f:'B'}]},{id:27,blocks:[{id:9,f:'B'},{id:4,f:'B'},{id:1,f:'W'}]},{id:28,blocks:[{id:1,f:'B'},{id:8,f:'W'},{id:4,f:'W'}]},{id:29,blocks:[{id:9,f:'W'},{id:5,f:'B'},{id:2,f:'W'}]},{id:30,blocks:[{id:8,f:'B'},{id:6,f:'W'},{id:2,f:'W'}]},{id:31,blocks:[{id:1,f:'B'},{id:6,f:'B'},{id:7,f:'W'}]},{id:32,blocks:[{id:3,f:'B'},{id:8,f:'B'},{id:6,f:'W'}]},{id:33,blocks:[{id:5,f:'B'},{id:9,f:'B'},{id:3,f:'W'}]},{id:34,blocks:[{id:1,f:'B'},{id:5,f:'W'},{id:7,f:'W'}]},{id:35,blocks:[{id:8,f:'W'},{id:4,f:'B'},{id:1,f:'W'}]},{id:36,blocks:[{id:3,f:'W'},{id:4,f:'W'},{id:9,f:'B'}]},{id:37,blocks:[{id:4,f:'B'},{id:2,f:'B'},{id:8,f:'W'}]},{id:38,blocks:[{id:2,f:'B'},{id:5,f:'W'},{id:7,f:'B'}]},{id:39,blocks:[{id:8,f:'B'},{id:6,f:'B'},{id:3,f:'W'}]},{id:40,blocks:[{id:5,f:'W'},{id:2,f:'B'},{id:9,f:'W'}]},{id:41,blocks:[{id:3,f:'W'},{id:7,f:'W'},{id:6,f:'B'}]},{id:42,blocks:[{id:7,f:'B'},{id:5,f:'W'},{id:1,f:'W'}]},{id:43,blocks:[{id:1,f:'W'},{id:5,f:'W'},{id:9,f:'W'}]},{id:44,blocks:[{id:2,f:'W'},{id:6,f:'W'},{id:7,f:'W'}]},{id:45,blocks:[{id:3,f:'W'},{id:4,f:'W'},{id:8,f:'W'}]},{id:46,blocks:[{id:3,f:'W'},{id:5,f:'W'},{id:7,f:'W'}]},{id:47,blocks:[{id:1,f:'W'},{id:6,f:'W'},{id:8,f:'W'}]},{id:48,blocks:[{id:2,f:'W'},{id:4,f:'W'},{id:9,f:'W'}]}];
+        const SHAPES=[{id:1,name:"No.001",active:[2,3,4,9],targets:[2,4,9]},{id:2,name:"No.002",active:[2,4,6,7],targets:[2,6,7]},{id:3,name:"No.003",active:[1,3,5,9],targets:[1,5,9]},{id:4,name:"No.004",active:[1,3,4,8],targets:[3,4,8]},{id:5,name:"No.005",active:[1,2,6,8],targets:[1,6,8]},{id:6,name:"No.006",active:[1,3,5,7],targets:[3,5,7]},{id:7,name:"No.007",active:[2,4,7,9],targets:[2,4,9]},{id:8,name:"No.008",active:[2,6,7,8],targets:[2,6,7]},{id:9,name:"No.009",active:[1,5,8,9],targets:[1,5,9]},{id:10,name:"No.010",active:[3,4,8,9],targets:[3,4,8]},{id:11,name:"No.011",active:[1,4,6,8],targets:[1,6,8]},{id:12,name:"No.012",active:[3,5,7,8],targets:[3,5,7]},{id:13,name:"No.013",active:[2,3,4,7,9],targets:[2,4,9]},{id:14,name:"No.014",active:[2,4,6,7,8],targets:[2,6,7]},{id:15,name:"No.015",active:[1,3,5,8,9],targets:[1,5,9]},{id:16,name:"No.016",active:[1,3,4,8,9],targets:[3,4,8]},{id:17,name:"No.017",active:[1,2,4,6,8],targets:[1,6,8]},{id:18,name:"No.018",active:[1,3,5,7,8],targets:[3,5,7]},{id:19,name:"No.019",active:[2,4,5,8,9],targets:[2,4,9]},{id:20,name:"No.020",active:[2,6,7,8,9],targets:[2,6,7]},{id:21,name:"No.021",active:[1,2,5,8,9],targets:[1,5,9]},{id:22,name:"No.022",active:[2,3,4,5,8],targets:[3,4,8]},{id:23,name:"No.023",active:[1,2,3,6,8],targets:[1,6,8]},{id:24,name:"No.024",active:[2,3,5,7,8],targets:[3,5,7]},{id:25,name:"No.025",active:[2,4,6,7,8,9],targets:[2,4,9]},{id:26,name:"No.026",active:[2,4,5,6,7,9],targets:[2,6,7]},{id:27,name:"No.027",active:[1,3,5,7,8,9],targets:[1,5,9]},{id:28,name:"No.028",active:[2,3,4,6,8,9],targets:[3,4,8]},{id:29,name:"No.029",active:[1,2,5,6,7,8],targets:[1,6,8]},{id:30,name:"No.030",active:[1,3,5,6,7,9],targets:[3,5,7]},{id:31,name:"No.031",active:[2,4,5,6,8,9],targets:[2,4,9]},{id:32,name:"No.032",active:[2,5,6,7,8,9],targets:[2,6,7]},{id:33,name:"No.033",active:[1,2,3,5,6,9],targets:[1,5,9]},{id:34,name:"No.034",active:[2,3,4,5,6,8],targets:[3,4,8]},{id:35,name:"No.035",active:[1,2,3,5,6,8],targets:[1,6,8]},{id:36,name:"No.036",active:[1,2,3,4,5,7],targets:[3,5,7]},{id:37,name:"No.037",active:[1,2,4,5,6,8,9],targets:[2,4,9]},{id:38,name:"No.038",active:[1,2,4,6,7,8,9],targets:[2,6,7]},{id:39,name:"No.039",active:[1,3,5,6,7,8,9],targets:[1,5,9]},{id:40,name:"No.040",active:[2,3,4,5,6,7,8],targets:[3,4,8]},{id:41,name:"No.041",active:[1,2,3,4,6,8,9],targets:[1,6,8]},{id:42,name:"No.042",active:[1,3,4,5,7,8,9],targets:[3,5,7]},{id:43,name:"No.043",active:[1,2,3,4,6,7,9],targets:[2,4,9]},{id:44,name:"No.044",active:[2,4,5,6,7,8,9],targets:[2,6,7]},{id:45,name:"No.045",active:[1,3,4,5,6,7,9],targets:[1,5,9]},{id:46,name:"No.046",active:[1,2,3,4,7,8,9],targets:[3,4,8]},{id:47,name:"No.047",active:[1,2,4,5,6,7,8],targets:[1,6,8]},{id:48,name:"No.048",active:[1,2,3,5,7,8,9],targets:[3,5,7]},{id:49,name:"No.049",active:[2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:50,name:"No.050",active:[1,2,3,4,6,7,8,9],targets:[2,6,7]},{id:51,name:"No.051",active:[1,3,4,5,6,7,8,9],targets:[1,5,9]},{id:52,name:"No.052",active:[1,2,3,4,5,6,8,9],targets:[3,4,8]},{id:53,name:"No.053",active:[1,2,3,4,6,7,8,9],targets:[1,6,8]},{id:54,name:"No.054",active:[1,2,3,5,6,7,8,9],targets:[3,5,7]},{id:55,name:"No.055",active:[1,2,3,5,6,7,8,9],targets:[2,4,9]},{id:56,name:"No.056",active:[2,4,5,6,7,8,9],targets:[2,6,7]},{id:57,name:"No.057",active:[1,3,4,5,6,7,9],targets:[1,5,9]},{id:58,name:"No.058",active:[1,2,3,4,7,8,9],targets:[3,4,8]},{id:59,name:"No.059",active:[1,2,4,5,6,7,8],targets:[1,6,8]},{id:60,name:"No.060",active:[1,2,3,5,7,8,9],targets:[3,5,7]},{id:61,name:"No.061",active:[1,2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:62,name:"No.062",active:[1,2,3,4,5,6,7,8,9],targets:[2,6,7]},{id:63,name:"No.063",active:[1,2,3,4,5,6,7,8,9],targets:[1,5,9]},{id:64,name:"No.064",active:[1,2,3,4,5,6,7,8,9],targets:[3,4,8]},{id:65,name:"No.065",active:[1,2,3,4,5,6,7,8,9],targets:[1,6,8]},{id:66,name:"No.066",active:[1,2,3,4,5,6,7,8,9],targets:[3,5,7]},{id:67,name:"No.067",active:[1,2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:68,name:"No.068",active:[1,2,3,4,5,6,7,8,9],targets:[2,6,7]},{id:69,name:"No.069",active:[1,2,3,4,5,6,7,8,9],targets:[1,5,9]},{id:70,name:"No.070",active:[1,2,3,4,5,6,7,8,9],targets:[3,4,8]},{id:71,name:"No.071",active:[1,2,3,4,5,6,7,8,9],targets:[1,6,8]},{id:72,name:"No.072",active:[1,2,3,4,5,6,7,8,9],targets:[3,5,7]}];
+        const ROUND_SETTINGS={1:{time:330,base:12,bonus:1},2:{time:300,base:12,bonus:2},3:{time:270,base:13,bonus:3},4:{time:240,base:13,bonus:4},5:{time:210,base:14,bonus:5},6:{time:180,base:14,bonus:6}};
+
+        // --- 變數 ---
+        let playerName = "", selectedLevel = 1, roundPool = [], currentRound = 1;
+        let totalScore = 0, totalTimeSpent = 0, roundStartTime = 0; 
+        let currentLayoutConfig = {}, userBoard = Array(9).fill(null);
+        let pickingSlot = -1, isRoundWon = false, isSolverUsed = false;
+        let timerInterval, timeLeft = 0, currentTotalTime = 0, lastValidLineCount = 0;
+        let longPressTimer, pickerFace = 'B'; 
+
+        // --- 8.0 戰略保留提示系統 ---
+        let hintsRemaining = 0;  // 該局剩餘次數
+        let totalSavedHints = 0; // 全局省下的提示總數
+        let activeHint = null;   
+
+        // --- 輔助思考系統 ---
+        let isAssistModeEnabled = false;
+        let unneededBlocks = []; 
+        let permanentlyRemovedBlocks = new Set();
+        let autoRemoveTimer = 30; 
+        let originalLevelInfoText = ""; 
+
+        // --- 沉浸式教學系統 ---
+        let introTutPhase = 0;
+
+        function playIntroTutorial() {
+            $('start-screen').style.display = 'none';
+            document.querySelector('.hud').style.display = 'none';
+            document.querySelector('.time-bar-container').style.display = 'none';
+            $('level-info').style.display = 'none';
+            $('action-controls').style.display = 'none';
+            $('btn-next').style.display = 'none';
+            document.querySelector('.instruction-bar').style.display = 'none';
+            
+            $('game-title').innerText = "新手引導";
+            $('intro-tut-msg').style.display = 'block';
+            $('grid-container').classList.remove('win-glow');
+            isRoundWon = false;
+
+            currentLayoutConfig = {};
+            for(let i=0; i<9; i++) currentLayoutConfig[i] = { type: 'EMPTY' };
+            const shape = SHAPES[0], tile = TARGET_TILES[0]; 
+            shape.active.forEach(pos => { currentLayoutConfig[pos-1] = { type: 'SOLVE' }; });
+            shape.targets.forEach((pos, idx) => {
+                if (idx < tile.blocks.length) {
+                    const b = tile.blocks[idx];
+                    currentLayoutConfig[pos-1] = { type: 'FIXED', id: b.id, face: b.f };
+                } else { currentLayoutConfig[pos-1] = { type: 'SOLVE' }; }
+            });
+
+            userBoard = Array(9).fill(null);
+            for(let i=0; i<9; i++) {
+                if (currentLayoutConfig[i].type === 'FIXED') {
+                    userBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true };
+                }
+            }
+            
+            setIntroPhase(1);
+        }
+
+        function setIntroPhase(phase) {
+            introTutPhase = phase;
+            const msgBox = $('intro-tut-msg');
+            if (phase === 1) {
+                msgBox.innerHTML = `偉大的封印師，準備好色獨封印的挑戰嗎？！<br><span style="color:#e74c3c">紅色方框</span>指定魔石可旋轉但不能翻面，<br><span style="color:#3498db">藍色方框</span>自選魔石可旋轉和翻面，<br>點擊 <span style="color:#3498db; font-weight:bold;">藍色方框</span> 加入2號魔石來完成方陣。`;
+                renderGameGrid();
+            } else if (phase === 2) {
+                msgBox.innerHTML = `翻面可看魔石背面，取消可回到魔石方陣，<br>請點選 <span style="color:#f1c40f; font-weight:bold;">2號魔石</span> 加入魔石方陣！`;
+            } else if (phase === 3) {
+                msgBox.innerHTML = `請點擊 <span style="color:#f1c40f; font-weight:bold;">魔石邊緣</span>來旋轉，<br>請點擊 <span style="color:#f1c40f; font-weight:bold;">魔石中間</span>來翻面，<br>所有行列寶石不同就可完成封印。`;
+                renderGameGrid(); 
+            } else if (phase === 4) {
+                msgBox.innerHTML = `<div style="text-align:center; color:#27ae60; font-weight:bold; font-size:1.3rem;">🎉 恭禧完成色獨封印！</div>`;
+                playSound('win');
+                $('grid-container').classList.add('win-glow');
+                
+                setTimeout(() => {
+                    introTutPhase = 0;
+                    $('intro-tut-msg').style.display = 'none';
+                    document.querySelector('.hud').style.display = 'grid';
+                    document.querySelector('.time-bar-container').style.display = 'block';
+                    $('level-info').style.display = 'block';
+                    document.querySelector('.instruction-bar').style.display = 'block';
+                    $('grid-container').classList.remove('win-glow');
+                    $('start-screen').style.display = 'flex';
+                }, 2500);
+            }
+        }
+
+        // --- 核心流程 ---
+        function selectLevel(lvl, btn) {
+            selectedLevel = lvl;
+            document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active'); playSound('action');
+        }
+
+        function getShapesByLevel(lvl) {
+            let pool = SHAPES.filter(s => {
+                if (lvl===1) return s.id>=1 && s.id<=12;
+                if (lvl===2) return s.id>=13 && s.id<=24;
+                if (lvl===3) return s.id>=25 && s.id<=36;
+                if (lvl===4) return s.id>=37 && s.id<=48;
+                if (lvl===5) return s.id>=49 && s.id<=60;
+                return s.id>=61 && s.id<=72;
+            });
+            return pool.sort(() => Math.random() - 0.5).slice(0, 6);
+        }
+
+        function startGame() {
+            const nameInput = $('player-name').value.trim();
+            if (!nameInput) return alert("請輸入封印師名號！");
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            // 讀取輔助系統設定
+            isAssistModeEnabled = $('assist-mode-toggle').checked; 
+            
+            playerName = nameInput; $('start-screen').style.display = 'none';
+            currentRound = 1; totalScore = 0; totalTimeSpent = 0; totalSavedHints = 0;
+            roundPool = getShapesByLevel(selectedLevel);
+            updateHUD(); loadRound(currentRound);
+        }
+
+        function loadRound(round) {
+            isRoundWon = false; isSolverUsed = false; lastValidLineCount = 0;
+            activeHint = null; 
+
+            $('game-title').innerText = `Round ${round}`;
+            $('btn-next').style.display = 'none';
+            $('action-controls').style.display = 'flex';
+            
+            let btnSolve = $('btn-solve'), btnReset = $('btn-reset'), btnHint = $('btn-hint');
+            btnSolve.style.display = 'block'; btnSolve.disabled = false;
+            btnSolve.innerText = "🏳️ 放棄"; btnSolve.className = "action-btn give-up";
+            btnReset.style.display = 'block'; btnReset.disabled = false;
+            
+            $('grid-container').classList.remove('win-glow');
+            $('timer-disp').classList.remove('urgent');
+
+            const config = ROUND_SETTINGS[round];
+            startTimer(config.time); roundStartTime = Date.now();
+
+            let solvable = false, attempts = 0, selectedShape = roundPool[round - 1], selectedTile;
+            let totalSolveSlots = 0;
+            let finalTempBoard = null;
+
+            while (!solvable && attempts < 50) {
+                totalSolveSlots = 0;
+                selectedTile = TARGET_TILES[Math.floor(Math.random() * TARGET_TILES.length)];
+                currentLayoutConfig = {};
+                for(let i=0; i<9; i++) currentLayoutConfig[i] = { type: 'EMPTY' };
+                selectedShape.active.forEach(pos => { 
+                    currentLayoutConfig[pos-1] = { type: 'SOLVE' }; 
+                    totalSolveSlots++;
+                });
+                selectedShape.targets.forEach((pos, idx) => {
+                    if (idx < selectedTile.blocks.length) {
+                        const b = selectedTile.blocks[idx];
+                        currentLayoutConfig[pos-1] = { type: 'FIXED', id: b.id, face: b.f };
+                        totalSolveSlots--; 
+                    } else { currentLayoutConfig[pos-1] = { type: 'SOLVE' }; }
+                });
+                
+                let tempBoard = Array(9).fill(null);
+                let tempUsed = new Set();
+                let emptySpecs = Array(9).fill(null);
+                for(let i=0; i<9; i++) {
+                    if (currentLayoutConfig[i].type === 'FIXED') {
+                        tempBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true };
+                        tempUsed.add(currentLayoutConfig[i].id);
+                    }
+                }
+                if (solveSmart(0, tempBoard, tempUsed, emptySpecs)) {
+                    solvable = true;
+                    finalTempBoard = tempBoard;
+                }
+                attempts++;
+            }
+            if (!solvable) return alert("生成失敗");
+
+            // --- 初始化輔助思考系統 ---
+            let neededIDs = new Set();
+            finalTempBoard.forEach(b => { if(b) neededIDs.add(b.id); });
+            unneededBlocks = [1,2,3,4,5,6,7,8,9].filter(id => !neededIDs.has(id));
+            unneededBlocks.sort(() => Math.random() - 0.5); 
+            permanentlyRemovedBlocks.clear(); 
+            autoRemoveTimer = 30; 
+            // ------------------------
+
+            // N-2 提示系統計算
+            hintsRemaining = Math.max(0, totalSolveSlots - 2);
+            
+            btnHint.style.display = 'block';
+            btnHint.innerText = `💡 提示 (${hintsRemaining})`;
+            btnHint.disabled = (hintsRemaining <= 0);
+            btnHint.style.backgroundColor = (hintsRemaining > 0) ? "#f39c12" : "#7f8c8d";
+
+            let levelInfo = $('level-info');
+            originalLevelInfoText = `${selectedShape.name} (通關+${config.base}分 | 速通+${config.bonus}分)`;
+            levelInfo.innerText = originalLevelInfoText;
+            levelInfo.style.color = "#f1c40f"; 
+            
+            userBoard = Array(9).fill(null);
+            for(let i=0; i<9; i++) {
+                if (currentLayoutConfig[i].type === 'FIXED') {
+                    userBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true };
+                }
+            }
+            renderGameGrid();
+        }
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            timeLeft = currentTotalTime = seconds; 
+            updateTimerDisplay(); updateTimeBar(); 
+            timerInterval = setInterval(() => {
+                timeLeft--; updateTimerDisplay(); updateTimeBar();
+                if (timeLeft <= 10) $('timer-disp').classList.add('urgent');
+                
+                // --- 輔助思考系統邏輯 (每30秒觸發一次) ---
+                if (isAssistModeEnabled && unneededBlocks.length > 0 && !isRoundWon && !isSolverUsed) {
+                    autoRemoveTimer--;
+                    if (autoRemoveTimer <= 0) {
+                        let removedID = unneededBlocks.pop();
+                        permanentlyRemovedBlocks.add(removedID);
+                        autoRemoveTimer = 30; // 重置計時器
+                        
+                        // 檢查被系統選中的錯誤魔石是否正在盤面上
+                        let removedFromBoard = false;
+                        for (let i = 0; i < 9; i++) {
+                            if (userBoard[i] && userBoard[i].id === removedID && !userBoard[i].isFixed) {
+                                userBoard[i] = null; // 直接從盤面上拔掉
+                                if (activeHint && activeHint.index === i) activeHint = null;
+                                removedFromBoard = true;
+                            }
+                        }
+
+                        if (removedFromBoard) {
+                            renderGameGrid(); // 更新盤面
+                            playSound('action'); // 播放移除音效
+                        }
+
+                        // 顯示提示訊息
+                        let levelInfo = $('level-info');
+                        if (removedFromBoard) {
+                            levelInfo.innerText = `🛡️ 輔助系統：已自動為您移除場上 1 顆錯誤魔石！`;
+                        } else {
+                            levelInfo.innerText = `🛡️ 輔助系統：已從選擇清單排除 1 顆干擾魔石！`;
+                        }
+                        levelInfo.style.color = "#3498db";
+                        
+                        // 如果玩家剛好打開著選擇面板，立即更新畫面讓他看到魔石消失
+                        if ($('picker-modal').style.display === 'flex') {
+                            renderPickerGrid();
+                        }
+
+                        // 4秒後恢復原本的關卡名稱顯示
+                        setTimeout(() => {
+                            if(!isRoundWon && !isSolverUsed) {
+                                levelInfo.innerText = originalLevelInfoText;
+                                levelInfo.style.color = "#f1c40f"; 
+                            }
+                        }, 4000);
+                    }
+                }
+                // ----------------------------------------
+
+                if (timeLeft <= 0) { clearInterval(timerInterval); handleTimeOut(); }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            $('timer-disp').innerText = `${m}:${s}`;
+        }
+
+        function updateTimeBar() {
+            const bar = $('time-bar-fill'), pct = (timeLeft / currentTotalTime) * 100;
+            bar.style.width = `${pct}%`;
+            bar.classList.remove('state-purple', 'state-blue', 'state-red');
+            bar.classList.add(pct > 70 ? 'state-purple' : pct < 30 ? 'state-red' : 'state-blue');
+        }
+
+        function handleTimeOut() {
+            if (isRoundWon) return;
+            calculateTimeSpent(); forceSolve(false);
+            let btnSolve = $('btn-solve'), levelInfo = $('level-info');
+            btnSolve.innerText = "⌛ 挑戰失敗"; btnSolve.className = "action-btn failed";
+            $('btn-reset').style.display = 'none'; $('btn-hint').style.display = 'none';
+            levelInfo.innerText = "時間耗盡，自動補完解答"; levelInfo.style.color = "#e74c3c";
+        }
+
+        function calculateTimeSpent() {
+            let spent = Math.floor((Date.now() - roundStartTime) / 1000);
+            return totalTimeSpent += spent, spent;
+        }
+
+        function nextLevel() {
+            clearInterval(timerInterval);
+            const spent = calculateTimeSpent(); 
+            if (!isSolverUsed) {
+                const config = ROUND_SETTINGS[currentRound];
+                totalScore += config.base + (spent <= 60 ? config.bonus : 0);
+                totalSavedHints += hintsRemaining; // 結算省下的提示數
+            }
+            updateHUD(); currentRound++;
+            if (currentRound > 6) showEndScreen(); else loadRound(currentRound);
+        }
+
+        function updateHUD() {
+            $('round-disp').innerText = `${currentRound} / 6`;
+            $('score-disp').innerText = totalScore;
+        }
+
+        function resetLevel() {
+            if (isRoundWon || isSolverUsed) return;
+            playSound('reset');
+            activeHint = null; 
+            for (let i = 0; i < 9; i++) {
+                if (currentLayoutConfig[i].type === 'FIXED') {
+                    userBoard[i].rot = 0; userBoard[i].face = currentLayoutConfig[i].face; 
+                } else { userBoard[i] = null; }
+            }
+            renderGameGrid(); lastValidLineCount = 0;
+        }
+
+        // --- 排行榜 ---
+        function saveRecord(now) {
+            const record = { name: playerName, score: totalScore, time: totalTimeSpent, hints: totalSavedHints, lvl: selectedLevel, date: now };
+            let lb = JSON.parse(localStorage.getItem('coludoku_lb_v8') || "[]");
+            lb.push(record);
+            // 排序：分數高 > 省下提示多 > 時間少
+            lb.sort((a,b) => b.score - a.score || b.hints - a.hints || a.time - b.time);
+            if (lb.length > 500) lb = lb.slice(0, 500);
+            localStorage.setItem('coludoku_lb_v8', JSON.stringify(lb));
+            return lb;
+        }
+
+        function getRankTitle(score) {
+            let maxS = 0; for(let i=1; i<=6; i++) maxS += (ROUND_SETTINGS[i].base + ROUND_SETTINGS[i].bonus);
+            let pct = score / maxS;
+            return pct===1 ? "傳奇" : pct>=0.9 ? "至尊" : pct>=0.75 ? "高級" : pct>=0.6 ? "初級" : "見習";
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2,'0'), s = (sec % 60).toString().padStart(2,'0');
+            return `${m}:${s}`;
+        }
+
+        function showEndScreen() {
+            $('end-modal').style.display = 'flex';
+            let maxScore = 0; for(let i=1; i<=6; i++) maxScore += (ROUND_SETTINGS[i].base + ROUND_SETTINGS[i].bonus);
+
+            // UI 調整：移出排行榜稱號，改在結算畫面專屬顯示
+            $('end-player-name').innerText = `${playerName}`;
+            $('end-title-desc').innerText = `✨ 恭喜獲得【${getRankTitle(totalScore)}封印師】稱號！ (挑戰 L${selectedLevel})`;
+            
+            $('end-score').innerText = `${totalScore}`;
+            $('end-hints').innerText = `${totalSavedHints}`;
+            $('end-time').innerText = formatTime(totalTimeSpent);
+            
+            const now = Date.now(), lbData = saveRecord(now);
+            const myRankIndex = lbData.findIndex(r => r.date === now), totalPlayers = lbData.length;
+            let beatenPct = totalPlayers > 1 ? Math.floor(((totalPlayers - myRankIndex - 1) / totalPlayers) * 100) : 100;
+            if (totalPlayers > 1 && myRankIndex === 0) beatenPct = 99;
+            $('end-percentile').innerText = `🏆 擊敗了全服 ${beatenPct}% 的玩家`;
+
+            const container = $('level-boards');
+            container.innerHTML = "";
+            for (let i = 1; i <= 6; i++) {
+                let lvlData = lbData.filter(r => r.lvl === i).slice(0, 5);
+                let boardHtml = `<div class="level-board"><div class="level-board-title">LEVEL ${i} 排行榜</div><table class="lb-mini-table">`;
+                if (lvlData.length === 0) boardHtml += `<tr><td style="text-align:center; color:#999; padding:15px 0;">尚無紀錄</td></tr>`;
+                else lvlData.forEach((r, idx) => { 
+                    boardHtml += `<tr><td class="rank">${idx + 1}</td><td class="name">${r.name}</td><td class="score-time">${r.score}-<span class="hint-icon">${r.hints || 0}</span> ${formatTime(r.time)}</td></tr>`; 
+                });
+                boardHtml += `</table></div>`; container.innerHTML += boardHtml;
+            }
+        }
+
+        // --- 遊戲操作 ---
+        function renderGameGrid() {
+            const container = $('grid-container');
+            container.innerHTML = '';
+            const glowLayer = document.createElement('div');
+            glowLayer.className = 'glow-overlay'; glowLayer.id = 'glow-layer';
+            container.appendChild(glowLayer);
+
+            for(let i=0; i<9; i++) {
+                const config = currentLayoutConfig[i], block = userBoard[i], div = document.createElement('div');
+                if (config.type === 'EMPTY') {
+                    div.className = 'block empty-slot'; div.style.visibility = 'hidden';
+                } else {
+                    div.className = 'block';
+                    if (block) {
+                        div.classList.add(block.isFixed ? 'fixed' : 'user-placed');
+                        div.innerHTML = `<img src="images/block_${block.face}-0${block.id}.png" class="block-image" style="transform: rotate(${block.rot * 90}deg);" draggable="false">`;
+                        
+                        // 糾錯特效：紅框但不覆蓋圖案的透視層
+                        if (activeHint && activeHint.index === i) {
+                            div.innerHTML += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0, 0, 0, 0.3); z-index:10; display:flex; justify-content:center; align-items:center; border-radius:6px; border: 2px solid #e74c3c; box-shadow: inset 0 0 15px rgba(231, 76, 60, 0.8); pointer-events:none; animation: pulseRed 1.5s infinite;">
+                                <img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.9; transform: rotate(0deg); filter: drop-shadow(0 0 5px #f1c40f);">
+                            </div>`;
+                        }
+
+                        const edgeZone = document.createElement('div');
+                        edgeZone.className = 'zone-edge'; edgeZone.onclick = (e) => { e.stopPropagation(); rotateBlock(i); };
+                        div.appendChild(edgeZone);
+                        if (!block.isFixed) {
+                            const centerZone = document.createElement('div');
+                            centerZone.className = 'zone-center'; centerZone.onclick = (e) => { e.stopPropagation(); flipBlock(i); };
+                            const startLongPress = () => { longPressTimer = setTimeout(() => clearBlock(i), 600); }, cancelLongPress = () => clearTimeout(longPressTimer);
+                            centerZone.addEventListener('mousedown', startLongPress); centerZone.addEventListener('touchstart', startLongPress);
+                            centerZone.addEventListener('mouseup', cancelLongPress); centerZone.addEventListener('touchend', cancelLongPress);
+                            centerZone.addEventListener('mouseleave', cancelLongPress);
+                            div.appendChild(centerZone);
+                        }
+                    } else {
+                        div.className = 'empty-slot'; 
+                        
+                        // 隱藏角度的提示虛影
+                        if (activeHint && activeHint.index === i) {
+                            div.innerHTML = `<img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.4; transform: rotate(0deg); pointer-events:none;">`;
+                            div.style.borderColor = '#f39c12';
+                            div.style.boxShadow = 'inset 0 0 15px rgba(243, 156, 18, 0.4)';
+                        } else {
+                            div.innerHTML = '+'; 
+                            div.style.borderColor = ''; 
+                            div.style.boxShadow = '';
+                        }
+                        
+                        if (introTutPhase === 1 && config.type === 'SOLVE') div.classList.add('tut-highlight-blue');
+                        div.onclick = () => openPicker(i);
+                    }
+                }
+                container.appendChild(div);
+            }
+            updateGlowsAndWin();
+        }
+
+        // --- 互動即立刻消影，還給玩家乾淨視野 ---
+        function rotateBlock(index) { 
+            if (userBoard[index] && !isRoundWon) { 
+                userBoard[index].rot = (userBoard[index].rot + 1) % 4; 
+                if (activeHint && activeHint.index === index) activeHint = null; 
+                playSound('action'); 
+                renderGameGrid(); 
+            } 
+        }
+
+        function flipBlock(index) { 
+            if (userBoard[index] && !userBoard[index].isFixed && !isRoundWon) { 
+                userBoard[index].face = userBoard[index].face === 'B' ? 'W' : 'B'; 
+                if (activeHint && activeHint.index === index) activeHint = null; 
+                playSound('action'); 
+                renderGameGrid(); 
+            } 
+        }
+
+        function clearBlock(index) { 
+            if (isRoundWon) return; 
+            if (userBoard[index] && userBoard[index].isFixed) return;
+
+            userBoard[index] = null; 
+            if (activeHint && activeHint.index === index) activeHint = null;
+
+            playSound('action'); 
+            if (introTutPhase === 3) setIntroPhase(1);            
+            renderGameGrid(); 
+        }
+        
+        function getAvailableBlocks() { 
+            const used = new Set(); 
+            userBoard.forEach(b => { if(b) used.add(b.id); }); 
+            // 輔助系統過濾掉已被排除的魔石
+            return [1,2,3,4,5,6,7,8,9].filter(id => !used.has(id) && !permanentlyRemovedBlocks.has(id)); 
+        }
+
+        function openPicker(index) { 
+            if (isRoundWon) return; 
+            if (introTutPhase === 1) {
+                if (currentLayoutConfig[index].type !== 'SOLVE') return; 
+                setIntroPhase(2);
+            } else if (introTutPhase > 0) return; 
+            
+            if (activeHint && activeHint.index === index) {
+                activeHint = null;
+                renderGameGrid();
+            }
+
+            pickingSlot = index; pickerFace = 'B'; renderPickerGrid(); $('picker-modal').style.display = 'flex'; 
+        }
+
+        function togglePickerFace() { pickerFace = (pickerFace === 'B') ? 'W' : 'B'; renderPickerGrid(); }
+
+        function renderPickerGrid() {
+            const grid = $('picker-grid');
+            $('picker-title').innerText = `選擇魔石 (${pickerFace}面)`; grid.innerHTML = '';
+            getAvailableBlocks().forEach(id => {
+                const div = document.createElement('div'); div.className = 'picker-item';
+                if (introTutPhase === 2 && id === 2) div.classList.add('tut-highlight-yellow');
+                
+                div.innerHTML = `<img src="images/block_${pickerFace}-0${id}.png">`;
+                div.onclick = () => { 
+                    if (introTutPhase === 2) {
+                        if (id !== 2) return; 
+                        setIntroPhase(3);
+                    }
+                    if (activeHint && activeHint.index === pickingSlot) activeHint = null; 
+                    userBoard[pickingSlot] = { id: id, face: pickerFace, rot: 0, isFixed: false }; 
+                    playSound('action'); closePicker(); renderGameGrid(); 
+                };
+                grid.appendChild(div);
+            });
+        }
+        function closePicker() { 
+            $('picker-modal').style.display = 'none'; 
+            if (introTutPhase === 2 && !userBoard[pickingSlot]) setIntroPhase(1); 
+        }
+
+        function getRotatedMatrix(m, times) {
+            for (let t = 0; t < times; t++) m = [[m[1][0], m[0][0]], [m[1][1], m[0][1]]];
+            return m;
+        }
+
+        function getFullGrid(boardState = userBoard) {
+            let fullGrid = Array(6).fill().map(() => Array(6).fill(0));
+            for(let i=0; i<9; i++) {
+                if(!boardState[i]) continue;
+                let b = boardState[i], r = Math.floor(i / 3) * 2, c = (i % 3) * 2;
+                let matrix = getRotatedMatrix(BLOCKS[b.id][b.face], b.rot);
+                fullGrid[r][c] = matrix[0][0]; fullGrid[r][c+1] = matrix[0][1];
+                fullGrid[r+1][c] = matrix[1][0]; fullGrid[r+1][c+1] = matrix[1][1];
+            } return fullGrid;
+        }
+
+        function isLineValid(grid, idx, isRow) {
+            let values = [];
+            for (let k = 0; k < 6; k++) { const val = isRow ? grid[idx][k] : grid[k][idx]; if (val !== 0) values.push(val); }
+            return values.length > 0 && new Set(values).size === values.length;
+        }
+
+        // 絕對唯一性驗證
+        function isValid(boardState) {
+            let seenIDs = new Set();
+            for (let i = 0; i < 9; i++) {
+                if (boardState[i]) {
+                    if (seenIDs.has(boardState[i].id)) return false;
+                    seenIDs.add(boardState[i].id);
+                }
+            }
+
+            let grid = getFullGrid(boardState);
+            for (let i = 0; i < 6; i++) {
+                let rSet = new Set(), cSet = new Set();
+                for (let j = 0; j < 6; j++) {
+                    let rVal = grid[i][j], cVal = grid[j][i];
+                    if (rVal !== 0) { if (rSet.has(rVal)) return false; rSet.add(rVal); }
+                    if (cVal !== 0) { if (cSet.has(cVal)) return false; cSet.add(cVal); }
+                }
+            } return true;
+        }
+
+        function updateGlowsAndWin() {
+            const glowLayer = $('glow-layer'), grid = getFullGrid(); glowLayer.innerHTML = '';
+            let currentValidLineCount = 0;
+            
+            for (let r = 0; r < 3; r++) {
+                let cnt = (userBoard[r*3]?1:0) + (userBoard[r*3+1]?1:0) + (userBoard[r*3+2]?1:0);
+                if (cnt > 1 && isLineValid(grid, r*2, true) && isLineValid(grid, r*2+1, true)) {
+                    const glow = document.createElement('div'); glow.className = 'glow-bar glow-row'; glow.style.top = (r * 33.33 + 0.5) + '%';
+                    glowLayer.appendChild(glow); currentValidLineCount++;
+                }
+            }
+            for (let c = 0; c < 3; c++) {
+                let cnt = (userBoard[c]?1:0) + (userBoard[c+3]?1:0) + (userBoard[c+6]?1:0);
+                if (cnt > 1 && isLineValid(grid, c*2, false) && isLineValid(grid, c*2+1, false)) {
+                    const glow = document.createElement('div'); glow.className = 'glow-bar glow-col'; glow.style.left = (c * 33.33 + 0.5) + '%';
+                    glowLayer.appendChild(glow); currentValidLineCount++;
+                }
+            }
+            if (currentValidLineCount > lastValidLineCount) playSound('line');
+            lastValidLineCount = currentValidLineCount;
+
+            const isFull = userBoard.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null);
+            if (isFull && isValid(userBoard) && !isRoundWon) {
+                isRoundWon = true; 
+                clearInterval(timerInterval); 
+                
+                if (introTutPhase > 0) {
+                    setIntroPhase(4);
+                    return; 
+                }
+
+                playSound('win');
+                const spent = Math.floor((Date.now() - roundStartTime) / 1000);
+                if (spent <= 60) {
+                    setTimeout(() => playSound('bonus'), 800);
+                    let levelInfo = $('level-info');
+                    levelInfo.innerText += ` ⭐ 速通達成 (+${ROUND_SETTINGS[currentRound].bonus}分)`; levelInfo.style.color = "#f1c40f";
+                }
+                $('grid-container').classList.add('win-glow');
+                $('btn-next').style.display = 'inline-block'; $('action-controls').style.display = 'none'; 
+            }
+        }
+        
+        // --- 核心演算法：無死角智能解答 (支援指定 ID 與正反面，動態推算旋轉) ---
+        function solveSmart(idx, board, usedIDs, userBoardSpecs) {
+            if (idx >= 9) return true;
+
+            if (board[idx] !== null) {
+                if (!isValid(board)) return false; 
+                return solveSmart(idx + 1, board, usedIDs, userBoardSpecs);
+            }
+
+            const config = currentLayoutConfig[idx];
+            if (config.type === 'EMPTY') return solveSmart(idx + 1, board, usedIDs, userBoardSpecs);
+            
+            if (config.type === 'FIXED') {
+                const { id, face } = config;
+                for (let rot = 0; rot < 4; rot++) {
+                    board[idx] = { id, face, rot, isFixed: true };
+                    if (isValid(board) && solveSmart(idx + 1, board, usedIDs, userBoardSpecs)) return true;
+                }
+                board[idx] = null; 
+                return false;
+            }
+
+            if (config.type === 'SOLVE') {
+                let spec = userBoardSpecs[idx];
+                if (spec) {
+                    // 若玩家已指定，嚴格鎖定 ID 與 正反面，但測試所有旋轉角度
+                    if (usedIDs.has(spec.id)) return false; 
+                    usedIDs.add(spec.id);
+                    for (let rot = 0; rot < 4; rot++) {
+                        board[idx] = { id: spec.id, face: spec.face, rot: rot, isFixed: false };
+                        if (isValid(board) && solveSmart(idx + 1, board, usedIDs, userBoardSpecs)) return true;
+                    }
+                    board[idx] = null; 
+                    usedIDs.delete(spec.id);
+                    return false;
+                } else {
+                    // 窮舉測試
+                    for (let id = 1; id <= 9; id++) {
+                        if (!usedIDs.has(id)) {
+                            usedIDs.add(id);
+                            for (let face of ['B', 'W']) {
+                                for (let rot = 0; rot < 4; rot++) {
+                                    board[idx] = { id, face, rot, isFixed: false };
+                                    if (isValid(board) && solveSmart(idx + 1, board, usedIDs, userBoardSpecs)) return true;
+                                }
+                            }
+                            board[idx] = null; 
+                            usedIDs.delete(id);
+                        }
+                    }
+                    return false; 
+                }
+            }
+            return false;
+        }
+
+        function getSmartSolution(board) {
+            let validSpecs = Array(9).fill(null);
+            let wrongIndex = -1;
+            
+            let fixedIDs = new Set();
+            for(let k=0; k<9; k++) if (currentLayoutConfig[k].type === 'FIXED') fixedIDs.add(currentLayoutConfig[k].id);
+
+            // 過濾並找出錯誤方塊
+            for (let i = 0; i < 9; i++) {
+                let b = board[i];
+                if (b && !b.isFixed) {
+                    validSpecs[i] = { id: b.id, face: b.face };
+                    
+                    let used = new Set(fixedIDs);
+                    let dup = false;
+                    for(let k=0; k<=i; k++) {
+                        if (validSpecs[k]) {
+                            if (used.has(validSpecs[k].id)) dup = true;
+                            used.add(validSpecs[k].id);
+                        }
+                    }
+                    
+                    if (dup) {
+                        if (wrongIndex === -1) wrongIndex = i;
+                        validSpecs[i] = null;
+                        continue;
+                    }
+
+                    let testBoard = Array(9).fill(null);
+                    if (!solveSmart(0, testBoard, new Set(fixedIDs), validSpecs)) {
+                        if (wrongIndex === -1) wrongIndex = i;
+                        validSpecs[i] = null;
+                    }
+                }
+            }
+            
+            let finalSolution = Array(9).fill(null);
+            solveSmart(0, finalSolution, new Set(fixedIDs), validSpecs);
+            return { solution: finalSolution, wrongIndex: wrongIndex };
+        }
+
+        function forceSolve(manual = true) {
+            clearInterval(timerInterval);
+            let { solution } = getSmartSolution(userBoard);
+            
+            setTimeout(() => {
+                if (solution && solution.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null)) {
+                    // 放棄時，給予包含旋轉角度的正確解答
+                    userBoard = solution;
+                    renderGameGrid();
+                    $('grid-container').classList.add('win-glow');
+                    $('btn-solve').disabled = true; $('btn-reset').disabled = true; $('btn-hint').disabled = true;
+                    $('btn-next').style.display = 'inline-block'; $('action-controls').style.display = 'none';
+                    isRoundWon = true; isSolverUsed = true;
+                    if (manual) { 
+                        let lvl = $('level-info'); lvl.innerText = "放棄，本關不計分"; lvl.style.color = "#e74c3c"; 
+                    }
+                } else { alert("無法封印！"); }
+            }, 100);
+        }
+
+        // --- 資源戰略提示系統 ---
+        function provideHint() {
+            if (isRoundWon) return;
+            if (activeHint) return; 
+
+            // 檢查：情境 C - 魔石全滿且 ID/正反面 皆正確 (只差旋轉)
+            let placedCount = 0;
+            let solveCount = 0;
+            for(let i=0; i<9; i++) {
+                if (currentLayoutConfig[i].type === 'SOLVE') {
+                    solveCount++;
+                    if (userBoard[i]) placedCount++;
+                }
+            }
+
+            let { solution, wrongIndex } = getSmartSolution(userBoard);
+
+            if (wrongIndex === -1 && placedCount === solveCount) {
+                alert("✨ 魔石全數歸位，試著轉轉看吧！");
+                return; // 不扣次數，不顯示虛影
+            }
+
+            if (hintsRemaining <= 0) {
+                alert("提示用盡，請靠自己完成最後的封印！");
+                return;
+            }
+
+            if (!solution || !solution.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null)) {
+               alert("無法生成提示，請確認盤面狀態。");
+               return;
+            }
+
+            let targetIdx = -1;
+            if (wrongIndex !== -1) {
+                targetIdx = wrongIndex; // 找出放錯的魔石 (情境 A)
+            } else {
+                for (let i = 0; i < 9; i++) {
+                    if (currentLayoutConfig[i].type === 'SOLVE' && !userBoard[i]) {
+                        targetIdx = i; // 找空位 (情境 B)
+                        break;
+                    }
+                }
+            }
+
+            if (targetIdx !== -1) {
+                let correctBlock = solution[targetIdx];
+                // 扣除次數，隱藏角度 (強制 rot=0)
+                hintsRemaining--;
+                activeHint = { index: targetIdx, id: correctBlock.id, face: correctBlock.face, rot: 0 };
+                
+                playSound('action');
+                let levelInfo = $('level-info');
+                levelInfo.innerText = `💡 提示啟動：請將閃爍方塊放入/換下`;
+                levelInfo.style.color = "#f39c12";
+
+                let btnHint = $('btn-hint');
+                btnHint.innerText = `💡 提示 (${hintsRemaining})`;
+                if (hintsRemaining <= 0) {
+                    btnHint.disabled = true;
+                    btnHint.style.backgroundColor = "#7f8c8d";
+                }
+                renderGameGrid(); 
+            }
+        }
+    </script>
+</body>
+</html>

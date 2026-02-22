@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>色獨封印師 (8.0 終極大師版)</title>
+    <title>色獨封印師 (8.0 冰火精靈版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
@@ -37,6 +37,19 @@
         .block { background-color: #ecf0f1; border: 2px solid transparent; position: relative; border-radius: 6px; overflow: hidden; display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .block.fixed { border-color: #c0392b; background-color: #fadbd8; }
         .block.user-placed { border-color: #2980b9; }
+
+        /* ❄️ 冰凍特效 */
+        .block.fixed.frozen { border-color: #74b9ff; background-color: rgba(116, 185, 255, 0.2); box-shadow: 0 0 15px rgba(116, 185, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5); }
+        .block.fixed.frozen .block-image { filter: sepia(1) hue-rotate(180deg) saturate(2) brightness(1.2) opacity(0.85); }
+        .block.fixed.frozen::after { content: "❄️"; position: absolute; bottom: 0px; right: 2px; font-size: 1.2rem; filter: drop-shadow(0 0 2px #fff); pointer-events: none; }
+
+        /* 🔥 燃燒特效 */
+        .fire-flash { animation: fireBurn 0.6s forwards; z-index: 50; }
+        @keyframes fireBurn {
+            0% { filter: sepia(1) hue-rotate(-50deg) saturate(5) brightness(1.5); transform: scale(1.1); }
+            50% { filter: sepia(1) hue-rotate(-50deg) saturate(10) brightness(2); transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; filter: blur(2px); }
+        }
 
         .block-image { width: 100%; height: 100%; object-fit: contain; transition: transform 0.2s ease; }
         .empty-slot { background-color: rgba(0,0,0,0.2); color: #7f8c8d; font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.1); border-radius: 6px; position: relative; overflow: hidden; }
@@ -124,10 +137,14 @@
                 <button class="lvl-btn" onclick="selectLevel(6, this)">LEVEL 6<br><small>Shape 61-72</small></button>
             </div>
             
-            <div style="margin: 15px auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; border: 1px solid rgba(52, 152, 219, 0.5); width: 80%; max-width: 300px;">
-                <label style="color: #ecf0f1; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <input type="checkbox" id="assist-mode-toggle" style="transform: scale(1.3);"> 
-                    🛡️ 輔助精靈 (每30秒排除1顆錯誤魔石)
+            <div style="margin: 15px auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); width: 85%; max-width: 320px;">
+                <label style="color: #ff7675; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="fire-assist-toggle" style="transform: scale(1.3);"> 
+                    🔥 火焰精靈 (每 30 秒燒毀 1 顆干擾魔石)
+                </label>
+                <label style="color: #74b9ff; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="ice-assist-toggle" style="transform: scale(1.3);"> 
+                    ❄️ 冰雪精靈 (每 50 秒凍結 1 顆正確魔石)
                 </label>
             </div>
 
@@ -202,6 +219,7 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(), gainNode = audioCtx.createGain(), now = audioCtx.currentTime;
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+            
             if (type === 'action') {
                 osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
                 gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
@@ -218,6 +236,14 @@
                 osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
                 gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
                 osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'fire') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
+                gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'ice') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.exponentialRampToValueAtTime(2000, now + 0.1);
+                gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
             }
         }
         function playNote(freq, time, dur) {
@@ -247,11 +273,18 @@
         let totalSavedHints = 0; // 全局省下的提示總數
         let activeHint = null;   
 
-        // --- 輔助思考系統 ---
-        let isAssistModeEnabled = false;
+        // --- 冰火精靈系統 ---
+        let isFireEnabled = false;
+        let isIceEnabled = false;
+        
         let unneededBlocks = []; 
         let permanentlyRemovedBlocks = new Set();
-        let autoRemoveTimer = 30; 
+        let fireTimer = 30; 
+        
+        let solutionFixedRotations = new Map(); // 紀錄指定魔石的正確角度
+        let frozenBlocks = new Set(); // 紀錄被冰凍鎖死的魔石
+        let iceTimer = 50;
+        
         let originalLevelInfoText = ""; 
 
         // --- 沉浸式教學系統 ---
@@ -345,8 +378,9 @@
             if (!nameInput) return alert("請輸入封印師名號！");
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            // 讀取輔助系統設定
-            isAssistModeEnabled = $('assist-mode-toggle').checked; 
+            // 讀取精靈系統設定
+            isFireEnabled = $('fire-assist-toggle').checked; 
+            isIceEnabled = $('ice-assist-toggle').checked; 
             
             playerName = nameInput; $('start-screen').style.display = 'none';
             currentRound = 1; totalScore = 0; totalTimeSpent = 0; totalSavedHints = 0;
@@ -411,13 +445,25 @@
             }
             if (!solvable) return alert("生成失敗");
 
-            // --- 初始化輔助思考系統 ---
+            // --- 冰火精靈系統初始化 ---
             let neededIDs = new Set();
-            finalTempBoard.forEach(b => { if(b) neededIDs.add(b.id); });
+            solutionFixedRotations.clear();
+            frozenBlocks.clear();
+            
+            for(let i=0; i<9; i++) {
+                if (finalTempBoard[i]) {
+                    neededIDs.add(finalTempBoard[i].id);
+                    if (currentLayoutConfig[i].type === 'FIXED') {
+                        solutionFixedRotations.set(i, finalTempBoard[i].rot);
+                    }
+                }
+            }
+            
             unneededBlocks = [1,2,3,4,5,6,7,8,9].filter(id => !neededIDs.has(id));
             unneededBlocks.sort(() => Math.random() - 0.5); 
             permanentlyRemovedBlocks.clear(); 
-            autoRemoveTimer = 30; 
+            fireTimer = 30; 
+            iceTimer = 50;
             // ------------------------
 
             // N-2 提示系統計算
@@ -450,50 +496,94 @@
                 timeLeft--; updateTimerDisplay(); updateTimeBar();
                 if (timeLeft <= 10) $('timer-disp').classList.add('urgent');
                 
-                // --- 輔助思考系統邏輯 (每30秒觸發一次) ---
-                if (isAssistModeEnabled && unneededBlocks.length > 0 && !isRoundWon && !isSolverUsed) {
-                    autoRemoveTimer--;
-                    if (autoRemoveTimer <= 0) {
+                // --- 火焰精靈邏輯 (每30秒) ---
+                if (isFireEnabled && unneededBlocks.length > 0 && !isRoundWon && !isSolverUsed) {
+                    fireTimer--;
+                    if (fireTimer <= 0) {
                         let removedID = unneededBlocks.pop();
                         permanentlyRemovedBlocks.add(removedID);
-                        autoRemoveTimer = 30; // 重置計時器
+                        fireTimer = 30; // 重置
                         
-                        // 檢查被系統選中的錯誤魔石是否正在盤面上
                         let removedFromBoard = false;
                         for (let i = 0; i < 9; i++) {
                             if (userBoard[i] && userBoard[i].id === removedID && !userBoard[i].isFixed) {
-                                userBoard[i] = null; // 直接從盤面上拔掉
-                                if (activeHint && activeHint.index === i) activeHint = null;
+                                // 加入火焰動畫然後拔除
+                                let cell = $('grid-container').children[i+1]; // +1 因為有 glow-layer
+                                if(cell) cell.classList.add('fire-flash');
+                                
+                                setTimeout(() => {
+                                    userBoard[i] = null;
+                                    if (activeHint && activeHint.index === i) activeHint = null;
+                                    renderGameGrid();
+                                }, 500); // 配合動畫消失時間
+                                
                                 removedFromBoard = true;
                             }
                         }
 
-                        if (removedFromBoard) {
-                            renderGameGrid(); // 更新盤面
-                            playSound('action'); // 播放移除音效
-                        }
+                        if (!removedFromBoard) renderGameGrid(); 
+                        playSound('fire'); 
 
-                        // 顯示提示訊息
                         let levelInfo = $('level-info');
-                        if (removedFromBoard) {
-                            levelInfo.innerText = `🛡️ 輔助系統：已自動為您移除場上 1 顆錯誤魔石！`;
-                        } else {
-                            levelInfo.innerText = `🛡️ 輔助系統：已從選擇清單排除 1 顆干擾魔石！`;
-                        }
-                        levelInfo.style.color = "#3498db";
+                        levelInfo.innerText = removedFromBoard 
+                            ? `🔥 火焰精靈：已為您燒毀場上 1 顆干擾魔石！`
+                            : `🔥 火焰精靈：已從選擇清單燒毀 1 顆錯誤魔石！`;
+                        levelInfo.style.color = "#ff7675";
                         
-                        // 如果玩家剛好打開著選擇面板，立即更新畫面讓他看到魔石消失
-                        if ($('picker-modal').style.display === 'flex') {
-                            renderPickerGrid();
-                        }
+                        if ($('picker-modal').style.display === 'flex') renderPickerGrid();
 
-                        // 4秒後恢復原本的關卡名稱顯示
                         setTimeout(() => {
                             if(!isRoundWon && !isSolverUsed) {
                                 levelInfo.innerText = originalLevelInfoText;
                                 levelInfo.style.color = "#f1c40f"; 
                             }
                         }, 4000);
+                    }
+                }
+
+                // --- 冰雪精靈邏輯 (每50秒) ---
+                if (isIceEnabled && !isRoundWon && !isSolverUsed) {
+                    iceTimer--;
+                    if (iceTimer <= 0) {
+                        iceTimer = 50; // 重置
+                        
+                        let fixedIndices = [];
+                        for(let i=0; i<9; i++) {
+                            if (currentLayoutConfig[i].type === 'FIXED' && !frozenBlocks.has(i)) {
+                                fixedIndices.push(i);
+                            }
+                        }
+                        
+                        if (fixedIndices.length > 0) {
+                            let targetIdx = -1;
+                            // 優先找角度錯誤的
+                            for (let idx of fixedIndices) {
+                                if (userBoard[idx].rot !== solutionFixedRotations.get(idx)) {
+                                    targetIdx = idx; break;
+                                }
+                            }
+                            // 如果全對，隨機選一顆凍結
+                            if (targetIdx === -1) {
+                                targetIdx = fixedIndices[Math.floor(Math.random() * fixedIndices.length)];
+                            }
+
+                            userBoard[targetIdx].rot = solutionFixedRotations.get(targetIdx);
+                            frozenBlocks.add(targetIdx);
+
+                            renderGameGrid();
+                            playSound('ice'); 
+
+                            let levelInfo = $('level-info');
+                            levelInfo.innerText = `❄️ 冰雪精靈：已為您校正並凍結 1 顆指定魔石！`;
+                            levelInfo.style.color = "#74b9ff";
+
+                            setTimeout(() => {
+                                if(!isRoundWon && !isSolverUsed) {
+                                    levelInfo.innerText = originalLevelInfoText;
+                                    levelInfo.style.color = "#f1c40f"; 
+                                }
+                            }, 4000);
+                        }
                     }
                 }
                 // ----------------------------------------
@@ -552,7 +642,9 @@
             activeHint = null; 
             for (let i = 0; i < 9; i++) {
                 if (currentLayoutConfig[i].type === 'FIXED') {
-                    userBoard[i].rot = 0; userBoard[i].face = currentLayoutConfig[i].face; 
+                    // 冰雪精靈的獎勵：被凍結的魔石不會被重置角度
+                    userBoard[i].rot = frozenBlocks.has(i) ? solutionFixedRotations.get(i) : 0; 
+                    userBoard[i].face = currentLayoutConfig[i].face; 
                 } else { userBoard[i] = null; }
             }
             renderGameGrid(); lastValidLineCount = 0;
@@ -585,7 +677,6 @@
             $('end-modal').style.display = 'flex';
             let maxScore = 0; for(let i=1; i<=6; i++) maxScore += (ROUND_SETTINGS[i].base + ROUND_SETTINGS[i].bonus);
 
-            // UI 調整：移出排行榜稱號，改在結算畫面專屬顯示
             $('end-player-name').innerText = `${playerName}`;
             $('end-title-desc').innerText = `✨ 恭喜獲得【${getRankTitle(totalScore)}封印師】稱號！ (挑戰 L${selectedLevel})`;
             
@@ -628,6 +719,12 @@
                     div.className = 'block';
                     if (block) {
                         div.classList.add(block.isFixed ? 'fixed' : 'user-placed');
+                        
+                        // 加入冰凍外觀
+                        if (frozenBlocks.has(i)) {
+                            div.classList.add('frozen');
+                        }
+
                         div.innerHTML = `<img src="images/block_${block.face}-0${block.id}.png" class="block-image" style="transform: rotate(${block.rot * 90}deg);" draggable="false">`;
                         
                         // 糾錯特效：紅框但不覆蓋圖案的透視層
@@ -640,6 +737,7 @@
                         const edgeZone = document.createElement('div');
                         edgeZone.className = 'zone-edge'; edgeZone.onclick = (e) => { e.stopPropagation(); rotateBlock(i); };
                         div.appendChild(edgeZone);
+                        
                         if (!block.isFixed) {
                             const centerZone = document.createElement('div');
                             centerZone.className = 'zone-center'; centerZone.onclick = (e) => { e.stopPropagation(); flipBlock(i); };
@@ -674,7 +772,8 @@
 
         // --- 互動即立刻消影，還給玩家乾淨視野 ---
         function rotateBlock(index) { 
-            if (userBoard[index] && !isRoundWon) { 
+            // 冰凍的魔石不可旋轉
+            if (userBoard[index] && !isRoundWon && !frozenBlocks.has(index)) { 
                 userBoard[index].rot = (userBoard[index].rot + 1) % 4; 
                 if (activeHint && activeHint.index === index) activeHint = null; 
                 playSound('action'); 
@@ -706,7 +805,7 @@
         function getAvailableBlocks() { 
             const used = new Set(); 
             userBoard.forEach(b => { if(b) used.add(b.id); }); 
-            // 輔助系統過濾掉已被排除的魔石
+            // 火焰精靈過濾掉已被排除的魔石
             return [1,2,3,4,5,6,7,8,9].filter(id => !used.has(id) && !permanentlyRemovedBlocks.has(id)); 
         }
 
@@ -838,7 +937,7 @@
             }
         }
         
-        // --- 核心演算法：無死角智能解答 (支援指定 ID 與正反面，動態推算旋轉) ---
+        // --- 核心演算法：無死角智能解答 ---
         function solveSmart(idx, board, usedIDs, userBoardSpecs) {
             if (idx >= 9) return true;
 
@@ -863,7 +962,6 @@
             if (config.type === 'SOLVE') {
                 let spec = userBoardSpecs[idx];
                 if (spec) {
-                    // 若玩家已指定，嚴格鎖定 ID 與 正反面，但測試所有旋轉角度
                     if (usedIDs.has(spec.id)) return false; 
                     usedIDs.add(spec.id);
                     for (let rot = 0; rot < 4; rot++) {
@@ -874,7 +972,6 @@
                     usedIDs.delete(spec.id);
                     return false;
                 } else {
-                    // 窮舉測試
                     for (let id = 1; id <= 9; id++) {
                         if (!usedIDs.has(id)) {
                             usedIDs.add(id);
@@ -941,7 +1038,6 @@
             
             setTimeout(() => {
                 if (solution && solution.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null)) {
-                    // 放棄時，給予包含旋轉角度的正確解答
                     userBoard = solution;
                     renderGameGrid();
                     $('grid-container').classList.add('win-glow');
@@ -960,7 +1056,6 @@
             if (isRoundWon) return;
             if (activeHint) return; 
 
-            // 檢查：情境 C - 魔石全滿且 ID/正反面 皆正確 (只差旋轉)
             let placedCount = 0;
             let solveCount = 0;
             for(let i=0; i<9; i++) {
@@ -974,7 +1069,7 @@
 
             if (wrongIndex === -1 && placedCount === solveCount) {
                 alert("✨ 魔石全數歸位，試著轉轉看吧！");
-                return; // 不扣次數，不顯示虛影
+                return; 
             }
 
             if (hintsRemaining <= 0) {
@@ -989,11 +1084,11 @@
 
             let targetIdx = -1;
             if (wrongIndex !== -1) {
-                targetIdx = wrongIndex; // 找出放錯的魔石 (情境 A)
+                targetIdx = wrongIndex; 
             } else {
                 for (let i = 0; i < 9; i++) {
                     if (currentLayoutConfig[i].type === 'SOLVE' && !userBoard[i]) {
-                        targetIdx = i; // 找空位 (情境 B)
+                        targetIdx = i; 
                         break;
                     }
                 }
@@ -1001,7 +1096,6 @@
 
             if (targetIdx !== -1) {
                 let correctBlock = solution[targetIdx];
-                // 扣除次數，隱藏角度 (強制 rot=0)
                 hintsRemaining--;
                 activeHint = { index: targetIdx, id: correctBlock.id, face: correctBlock.face, rot: 0 };
                 

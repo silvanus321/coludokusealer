@@ -159,7 +159,7 @@
                 </label>
                 <label style="color: #d2691e; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="earth-assist-toggle" style="transform: scale(1.3);"> 
-                    🟤 大地精靈 (主動: 消除一個空格, 2次/場)
+                    🟤 大地精靈 (主動: 消除一個空格, 1次/場)
                 </label>
                 <label style="color: #2ecc71; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="nature-assist-toggle" style="transform: scale(1.3);"> 
@@ -440,7 +440,6 @@
             
             // 整場遊戲的主動技額度在此重置
             holyLightUses = 2;  
-            earthUses = 2;
 
             roundPool = getShapesByLevel(selectedLevel);
             updateHUD(); loadRound(currentRound);
@@ -502,8 +501,9 @@
             // 執行關卡狀態初始化 (抽取為獨立函數以供生靈精靈重置使用)
             initializeRoundState();
             
-            // 生靈精靈：每關 1 次
+            // 每次進入「新關卡」時配發次數的主動技
             natureUses = 1;
+            earthUses = 1;  // 新增這行：大地精靈每關 1 次
 
             let levelInfo = $('level-info');
             originalLevelInfoText = `${selectedShape.name} (通關+${config.base}分 | 速通+${config.bonus}分)`;
@@ -1405,4 +1405,5 @@
     </script>
 </body>
 </html>
+
 

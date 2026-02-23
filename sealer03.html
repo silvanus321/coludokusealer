@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>色獨封印師 (10.0 精靈完全體)</title>
+    <title>色獨封印師 (12.0 六大精靈完全體)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
         .header-box { position: relative; width: 100%; max-width: 400px; text-align: center; margin: 10px 0; }
         h1 { margin: 0; letter-spacing: 2px; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: inline-block; }
 
-        /* --- 2. HUD & 頂部 UI (重置、時間條、放棄) --- */
+        /* --- 2. HUD & 頂部 UI --- */
         .hud { display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.1); padding: 10px 15px; border-radius: 50px; margin-bottom: 10px; box-sizing: border-box; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); align-items: center; text-align: center; }
         .hud-item { font-weight: bold; font-size: 0.85rem; }
         .hud-val { color: #f1c40f; display: block; font-family: monospace; font-size: 1.2rem; }
         .hud-val.urgent { color: #e74c3c; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
 
-        /* 新版頂部控制列 */
         .top-controls-container { display: flex; width: 100%; max-width: 380px; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
-        
         .small-action-btn { font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; font-weight: bold; border: none; color: white; cursor: pointer; transition: 0.2s; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         .small-action-btn:active { transform: scale(0.95); }
         .small-action-btn.btn-reset { background-color: #16a085; }
@@ -49,7 +47,7 @@
         .block.fixed { border-color: #c0392b; background-color: #fadbd8; }
         .block.user-placed { border-color: #2980b9; }
 
-        /* 🟣 闇影特效 (黑洞) */
+        /* 🟣 闇影特效 */
         .void-erosion { position: absolute; width: 50%; height: 50%; background: radial-gradient(circle, #000 20%, #8e44ad 80%); box-shadow: 0 0 10px #8e44ad; border-radius: 50%; z-index: 15; pointer-events: none; animation: pulseVoid 1.5s infinite alternate; }
         .void-erosion.corner-0 { top: 0; left: 0; border-top-left-radius: 6px; border-top-right-radius: 50%; border-bottom-left-radius: 50%; }
         .void-erosion.corner-1 { top: 0; right: 0; border-top-right-radius: 6px; border-top-left-radius: 50%; border-bottom-right-radius: 50%; }
@@ -57,22 +55,14 @@
         .void-erosion.corner-3 { bottom: 0; right: 0; border-bottom-right-radius: 6px; border-bottom-left-radius: 50%; border-top-right-radius: 50%; }
         @keyframes pulseVoid { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 1; } }
 
-        /* ❄️ 冰凍特效 (僅限邊緣，不擋中間) */
-        .block.fixed.frozen { 
-            border-color: #74b9ff; 
-            background-color: transparent; 
-            box-shadow: 0 0 15px rgba(116, 185, 255, 0.5), inset 0 0 25px 8px rgba(116, 185, 255, 0.6), inset 0 0 8px 2px rgba(255, 255, 255, 0.8); 
-        }
+        /* ❄️ 冰凍特效 */
+        .block.fixed.frozen { border-color: #74b9ff; background-color: transparent; box-shadow: 0 0 15px rgba(116, 185, 255, 0.5), inset 0 0 25px 8px rgba(116, 185, 255, 0.6), inset 0 0 8px 2px rgba(255, 255, 255, 0.8); }
         .block.fixed.frozen .block-image { opacity: 1; }
         .block.fixed.frozen::after { content: "❄️"; position: absolute; top: -2px; right: -2px; font-size: 1rem; filter: drop-shadow(0 0 2px #fff); pointer-events: none; z-index: 16; }
 
         /* 🔥 燃燒特效 */
         .fire-flash { animation: fireBurn 0.6s forwards; z-index: 50; }
-        @keyframes fireBurn {
-            0% { filter: sepia(1) hue-rotate(-50deg) saturate(5) brightness(1.5); transform: scale(1.1); }
-            50% { filter: sepia(1) hue-rotate(-50deg) saturate(10) brightness(2); transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0); opacity: 0; filter: blur(2px); }
-        }
+        @keyframes fireBurn { 0% { filter: sepia(1) hue-rotate(-50deg) saturate(5) brightness(1.5); transform: scale(1.1); } 50% { filter: sepia(1) hue-rotate(-50deg) saturate(10) brightness(2); transform: scale(1.2); opacity: 1; } 100% { transform: scale(0); opacity: 0; filter: blur(2px); } }
 
         .block-image { width: 100%; height: 100%; object-fit: contain; }
         .empty-slot { background-color: rgba(0,0,0,0.2); color: #7f8c8d; font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.1); border-radius: 6px; position: relative; overflow: hidden; }
@@ -85,30 +75,28 @@
         .glow-bar { position: absolute; box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; transition: opacity 0.3s; }
         .glow-row { left: 1%; width: 98%; height: 31%; background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
         .glow-col { top: 1%; height: 98%; width: 31%; background: linear-gradient(to right, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
-
-        /* 糾錯警告動畫 */
         @keyframes pulseRed { 0%, 100% { box-shadow: inset 0 0 10px rgba(231,76,60,0.5); border-color: #c0392b; } 50% { box-shadow: inset 0 0 20px rgba(231,76,60,0.9); border-color: #e74c3c; } }
 
         /* --- 4. 選單與按鈕 --- */
         .action-btn { background-color: #27ae60; color: white; border: none; padding: 15px 40px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; margin-top: 25px; width: 80%; transition: all 0.2s; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .action-btn:active { transform: scale(0.95); }
         
-        /* 技能列 Action Bar */
-        .sprite-action-bar { display: flex; gap: 8px; width: 100%; max-width: 400px; margin-top: 15px; justify-content: center; }
-        .sprite-btn { flex: 1; border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 8px 2px; cursor: pointer; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; font-size: 0.9rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);}
-        .sprite-btn span { font-family: monospace; font-size: 1.1rem; color: #f1c40f; margin-top: 3px; display: block; }
+        /* 技能列 Action Bar (極致排版，適應 6 個精靈並排) */
+        .sprite-action-bar { display: flex; gap: 4px; width: 100%; max-width: 400px; margin-top: 15px; justify-content: center; }
+        .sprite-btn { flex: 1; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 5px 1px; cursor: pointer; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; font-size: 0.75rem; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); white-space: nowrap;}
+        .sprite-btn span { font-family: monospace; font-size: 0.95rem; color: #f1c40f; margin-top: 3px; display: block; }
         .sprite-btn.disabled { filter: grayscale(100%); opacity: 0.5; border-color: rgba(255,255,255,0.1); cursor: not-allowed; }
+        
+        /* 各精靈漸層主題色 */
         .sprite-btn.theme-holy { background: linear-gradient(135deg, #f39c12, #2c3e50); }
+        .sprite-btn.theme-earth { background: linear-gradient(135deg, #27ae60, #2c3e50); }
+        .sprite-btn.theme-nature { background: linear-gradient(135deg, #2ecc71, #2c3e50); } /* 綠色生靈 */
         .sprite-btn.theme-shadow { background: linear-gradient(135deg, #8e44ad, #2c3e50); }
         .sprite-btn.theme-ice { background: linear-gradient(135deg, #2980b9, #2c3e50); }
         .sprite-btn.theme-fire { background: linear-gradient(135deg, #d35400, #2c3e50); }
 
-        /* 技能發動強烈閃爍 */
         .flash-intense { animation: flashSkill 0.3s 5 alternate; }
-        @keyframes flashSkill {
-            0% { filter: brightness(1); transform: scale(1); box-shadow: 0 0 5px white; }
-            100% { filter: brightness(2.5); transform: scale(1.1); box-shadow: 0 0 25px white; border-color: white;}
-        }
+        @keyframes flashSkill { 0% { filter: brightness(1); transform: scale(1); box-shadow: 0 0 5px white; } 100% { filter: brightness(2.5); transform: scale(1.1); box-shadow: 0 0 25px white; border-color: white;} }
 
         /* 等級選擇鈕 */
         .lvl-btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 300px; margin: 20px auto; }
@@ -121,32 +109,26 @@
         /* --- 5. 彈窗與結算 --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); overflow-y: auto; }
         .modal-content { background: white; color: #333; padding: 25px; border-radius: 15px; width: 95%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
-        
         .picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
         .picker-item { border: 1px solid #ddd; border-radius: 8px; padding: 5px; cursor: pointer; }
         .picker-item img { width: 100%; }
-
         .percentile-box { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin: 8px auto 0; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
         
-        /* 排行榜 */
         .level-boards-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; width: 100%;}
         .level-board { background: #fff; border: 2px solid #ecf0f1; border-radius: 10px; padding: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
         .level-board-title { font-weight: bold; color: #2980b9; text-align: center; margin-bottom: 5px; border-bottom: 2px solid #3498db; padding-bottom: 4px; font-size: 0.9rem;}
-        
-        .lb-mini-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left; }
+        .lb-mini-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; text-align: left; }
         .lb-mini-table td { padding: 5px 2px; border-bottom: 1px dashed #ecf0f1; vertical-align: middle; }
         .lb-mini-table tr:last-child td { border-bottom: none; }
         .lb-mini-table .rank { font-weight: bold; color: #f39c12; width: 15px; text-align: center;}
-        .lb-mini-table .name { font-weight: bold; color: #34495e; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lb-mini-table .name { font-weight: bold; color: #34495e; max-width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .lb-mini-table .score-time { text-align: right; color: #7f8c8d; font-family: monospace; line-height: 1.2;}
-        .lb-mini-table .hint-icon { color: #f39c12; font-size: 0.8rem; }
+        .lb-mini-table .hint-icon { color: #f39c12; font-size: 0.75rem; }
 
         #start-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: #2c3e50; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .intro-box { text-align: center; padding: 20px; width: 100%; box-sizing: border-box;}
         .intro-title { font-size: 2.5rem; color: #f1c40f; margin-bottom: 10px; letter-spacing: 3px; }
         .intro-desc { font-size: 1.1rem; color: #ecf0f1; margin-bottom: 20px; line-height: 1.8; }
-
-        /* --- 教學專屬特效 --- */
         .tut-highlight-blue { border: 3px dashed #3498db !important; animation: pulseBlue 1.5s infinite; background-color: rgba(52, 152, 219, 0.2); }
         .tut-highlight-yellow { box-shadow: 0 0 15px 5px #f1c40f; border: 2px solid #f1c40f !important; animation: pulseYellow 1.5s infinite; }
         @keyframes pulseBlue { 0%, 100% { box-shadow: 0 0 5px #3498db; } 50% { box-shadow: 0 0 15px #3498db; } }
@@ -158,7 +140,7 @@
     <div id="start-screen">
         <div class="intro-box">
             <div class="intro-title">🔮色獨封印師🔮</div>
-            <div class="intro-desc"><strong>行列寶石相異，完成色獨封印</strong></div>
+            <div class="intro-desc"><strong>帶越少精靈，排行榜越高分！</strong></div>
             <div class="lvl-btn-group">
                 <button class="lvl-btn active" onclick="selectLevel(1, this)">LEVEL 1<br><small>Shape 01-12</small></button>
                 <button class="lvl-btn" onclick="selectLevel(2, this)">LEVEL 2<br><small>Shape 13-24</small></button>
@@ -168,20 +150,32 @@
                 <button class="lvl-btn" onclick="selectLevel(6, this)">LEVEL 6<br><small>Shape 61-72</small></button>
             </div>
             
-            <div style="margin: 15px auto; display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); width: 85%; max-width: 320px; text-align: left;">
-                <div style="color: #ecf0f1; font-weight: bold; text-align: center; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">【 輔助精靈 (可選 0~3) 】</div>
-                <div style="color: #f1c40f; font-size: 0.85rem; text-align: center; margin-bottom: 5px;">✨ 聖光精靈 (主動技) 預設參戰</div>
-                <label style="color: #9b59b6; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <div style="margin: 15px auto; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); width: 90%; max-width: 320px; text-align: left;">
+                <div style="color: #ecf0f1; font-weight: bold; text-align: center; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">【 六大精靈殿堂 (可選 0~6) 】</div>
+                
+                <label style="color: #f1c40f; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="holy-assist-toggle" style="transform: scale(1.3);"> 
+                    ✨ 聖光精靈 (主動: 照亮正確方塊, 2次/場)
+                </label>
+                <label style="color: #27ae60; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="earth-assist-toggle" style="transform: scale(1.3);"> 
+                    🟤 大地精靈 (主動: 消除一個空格, 2次/場)
+                </label>
+                <label style="color: #2ecc71; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="nature-assist-toggle" style="transform: scale(1.3);"> 
+                    🟢 生靈精靈 (主動: 逆轉時空重置, 1次/關)
+                </label>
+                <label style="color: #9b59b6; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="shadow-assist-toggle" style="transform: scale(1.3);"> 
-                    🟣 闇影精靈 (40s隨機侵蝕1顆指定魔石)
+                    🟣 闇影精靈 (被動: 20s 侵蝕方塊成百搭)
                 </label>
-                <label style="color: #74b9ff; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <label style="color: #74b9ff; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="ice-assist-toggle" style="transform: scale(1.3);"> 
-                    ❄️ 冰雪精靈 (50s校正並凍結絕對正確方塊)
+                    ❄️ 冰雪精靈 (被動: 50s 凍結絕對正確方塊)
                 </label>
-                <label style="color: #ff7675; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <label style="color: #ff7675; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="fire-assist-toggle" style="transform: scale(1.3);"> 
-                    🔥 火焰精靈 (30s燒毀場上錯誤或干擾方塊)
+                    🔥 火焰精靈 (被動: 30s 燒毀場上錯誤方塊)
                 </label>
             </div>
 
@@ -235,7 +229,7 @@
                 
                 <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
                     <div>得分 <span id="end-score" style="color:#27ae60; font-weight:bold; font-size:1.1rem;">0</span></div>
-                    <div>✨保留 <span id="end-hints" style="color:#f39c12; font-weight:bold; font-size:1.1rem;">0</span></div>
+                    <div>🧚精靈數 <span id="end-hints" style="color:#f39c12; font-weight:bold; font-size:1.1rem;">0</span></div>
                     <div>耗時 <span id="end-time" style="color:#e67e22; font-weight:bold; font-size:1.1rem;">00:00</span></div>
                 </div>
                 <div class="percentile-box" id="end-percentile">🏆 擊敗了全服 100% 的玩家</div>
@@ -247,10 +241,8 @@
     </div>
 
     <script>
-        // --- DOM 簡寫助手 ---
         const $ = id => document.getElementById(id);
 
-        // --- 0. 音效系統 ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -295,7 +287,6 @@
             osc.start(time); osc.stop(time + dur);
         }
 
-        // --- 1. 資料庫 ---
         const BLOCKS={1:{B:[[1,2],[3,4]],W:[[5,6],[3,4]]},2:{B:[[4,6],[3,5]],W:[[2,6],[1,5]]},3:{B:[[2,1],[6,5]],W:[[3,4],[1,2]]},4:{B:[[5,2],[6,3]],W:[[4,1],[5,2]]},5:{B:[[4,5],[1,2]],W:[[3,4],[6,1]]},6:{B:[[1,4],[6,3]],W:[[6,3],[5,2]]},7:{B:[[1,6],[5,4]],W:[[2,3],[6,1]]},8:{B:[[2,6],[3,1]],W:[[2,4],[3,5]]},9:{B:[[2,3],[4,5]],W:[[6,1],[4,5]]}};
         const TARGET_TILES=[{id:1,blocks:[{id:1,f:'B'},{id:5,f:'B'},{id:9,f:'B'}]},{id:2,blocks:[{id:2,f:'B'},{id:6,f:'B'},{id:7,f:'B'}]},{id:3,blocks:[{id:3,f:'B'},{id:4,f:'B'},{id:8,f:'B'}]},{id:4,blocks:[{id:3,f:'B'},{id:5,f:'B'},{id:7,f:'B'}]},{id:5,blocks:[{id:1,f:'B'},{id:6,f:'B'},{id:8,f:'B'}]},{id:6,blocks:[{id:2,f:'B'},{id:4,f:'B'},{id:9,f:'B'}]},{id:7,blocks:[{id:1,f:'B'},{id:5,f:'B'},{id:8,f:'W'}]},{id:8,blocks:[{id:2,f:'B'},{id:9,f:'B'},{id:6,f:'W'}]},{id:9,blocks:[{id:6,f:'B'},{id:1,f:'W'},{id:7,f:'B'}]},{id:10,blocks:[{id:9,f:'W'},{id:3,f:'B'},{id:4,f:'W'}]},{id:11,blocks:[{id:2,f:'W'},{id:7,f:'W'},{id:4,f:'B'}]},{id:12,blocks:[{id:5,f:'W'},{id:3,f:'W'},{id:8,f:'B'}]},{id:13,blocks:[{id:5,f:'B'},{id:3,f:'B'},{id:9,f:'W'}]},{id:14,blocks:[{id:1,f:'B'},{id:5,f:'W'},{id:8,f:'B'}]},{id:15,blocks:[{id:4,f:'B'},{id:8,f:'B'},{id:2,f:'W'}]},{id:16,blocks:[{id:3,f:'B'},{id:6,f:'W'},{id:7,f:'W'}]},{id:17,blocks:[{id:9,f:'W'},{id:6,f:'B'},{id:1,f:'W'}]},{id:18,blocks:[{id:4,f:'W'},{id:2,f:'W'},{id:7,f:'B'}]},{id:19,blocks:[{id:3,f:'B'},{id:4,f:'B'},{id:7,f:'W'}]},{id:20,blocks:[{id:9,f:'B'},{id:4,f:'W'},{id:1,f:'B'}]},{id:21,blocks:[{id:7,f:'B'},{id:5,f:'B'},{id:2,f:'W'}]},{id:22,blocks:[{id:6,f:'W'},{id:8,f:'W'},{id:2,f:'B'}]},{id:23,blocks:[{id:5,f:'B'},{id:8,f:'W'},{id:3,f:'W'}]},{id:24,blocks:[{id:1,f:'W'},{id:9,f:'B'},{id:6,f:'W'}]},{id:25,blocks:[{id:2,f:'B'},{id:6,f:'B'},{id:9,f:'W'}]},{id:26,blocks:[{id:7,f:'B'},{id:4,f:'W'},{id:3,f:'B'}]},{id:27,blocks:[{id:9,f:'B'},{id:4,f:'B'},{id:1,f:'W'}]},{id:28,blocks:[{id:1,f:'B'},{id:8,f:'W'},{id:4,f:'W'}]},{id:29,blocks:[{id:9,f:'W'},{id:5,f:'B'},{id:2,f:'W'}]},{id:30,blocks:[{id:8,f:'B'},{id:6,f:'W'},{id:2,f:'W'}]},{id:31,blocks:[{id:1,f:'B'},{id:6,f:'B'},{id:7,f:'W'}]},{id:32,blocks:[{id:3,f:'B'},{id:8,f:'B'},{id:6,f:'W'}]},{id:33,blocks:[{id:5,f:'B'},{id:9,f:'B'},{id:3,f:'W'}]},{id:34,blocks:[{id:1,f:'B'},{id:5,f:'W'},{id:7,f:'W'}]},{id:35,blocks:[{id:8,f:'W'},{id:4,f:'B'},{id:1,f:'W'}]},{id:36,blocks:[{id:3,f:'W'},{id:4,f:'W'},{id:9,f:'B'}]},{id:37,blocks:[{id:4,f:'B'},{id:2,f:'B'},{id:8,f:'W'}]},{id:38,blocks:[{id:2,f:'B'},{id:5,f:'W'},{id:7,f:'B'}]},{id:39,blocks:[{id:8,f:'B'},{id:6,f:'B'},{id:3,f:'W'}]},{id:40,blocks:[{id:5,f:'W'},{id:2,f:'B'},{id:9,f:'W'}]},{id:41,blocks:[{id:3,f:'W'},{id:7,f:'W'},{id:6,f:'B'}]},{id:42,blocks:[{id:7,f:'B'},{id:5,f:'W'},{id:1,f:'W'}]},{id:43,blocks:[{id:1,f:'W'},{id:5,f:'W'},{id:9,f:'W'}]},{id:44,blocks:[{id:2,f:'W'},{id:6,f:'W'},{id:7,f:'W'}]},{id:45,blocks:[{id:3,f:'W'},{id:4,f:'W'},{id:8,f:'W'}]},{id:46,blocks:[{id:3,f:'W'},{id:5,f:'W'},{id:7,f:'W'}]},{id:47,blocks:[{id:1,f:'W'},{id:6,f:'W'},{id:8,f:'W'}]},{id:48,blocks:[{id:2,f:'W'},{id:4,f:'W'},{id:9,f:'W'}]}];
         const SHAPES=[{id:1,name:"No.001",active:[2,3,4,9],targets:[2,4,9]},{id:2,name:"No.002",active:[2,4,6,7],targets:[2,6,7]},{id:3,name:"No.003",active:[1,3,5,9],targets:[1,5,9]},{id:4,name:"No.004",active:[1,3,4,8],targets:[3,4,8]},{id:5,name:"No.005",active:[1,2,6,8],targets:[1,6,8]},{id:6,name:"No.006",active:[1,3,5,7],targets:[3,5,7]},{id:7,name:"No.007",active:[2,4,7,9],targets:[2,4,9]},{id:8,name:"No.008",active:[2,6,7,8],targets:[2,6,7]},{id:9,name:"No.009",active:[1,5,8,9],targets:[1,5,9]},{id:10,name:"No.010",active:[3,4,8,9],targets:[3,4,8]},{id:11,name:"No.011",active:[1,4,6,8],targets:[1,6,8]},{id:12,name:"No.012",active:[3,5,7,8],targets:[3,5,7]},{id:13,name:"No.013",active:[2,3,4,7,9],targets:[2,4,9]},{id:14,name:"No.014",active:[2,4,6,7,8],targets:[2,6,7]},{id:15,name:"No.015",active:[1,3,5,8,9],targets:[1,5,9]},{id:16,name:"No.016",active:[1,3,4,8,9],targets:[3,4,8]},{id:17,name:"No.017",active:[1,2,4,6,8],targets:[1,6,8]},{id:18,name:"No.018",active:[1,3,5,7,8],targets:[3,5,7]},{id:19,name:"No.019",active:[2,4,5,8,9],targets:[2,4,9]},{id:20,name:"No.020",active:[2,6,7,8,9],targets:[2,6,7]},{id:21,name:"No.021",active:[1,2,5,8,9],targets:[1,5,9]},{id:22,name:"No.022",active:[2,3,4,5,8],targets:[3,4,8]},{id:23,name:"No.023",active:[1,2,3,6,8],targets:[1,6,8]},{id:24,name:"No.024",active:[2,3,5,7,8],targets:[3,5,7]},{id:25,name:"No.025",active:[2,4,6,7,8,9],targets:[2,4,9]},{id:26,name:"No.026",active:[2,4,5,6,7,9],targets:[2,6,7]},{id:27,name:"No.027",active:[1,3,5,7,8,9],targets:[1,5,9]},{id:28,name:"No.028",active:[2,3,4,6,8,9],targets:[3,4,8]},{id:29,name:"No.029",active:[1,2,5,6,7,8],targets:[1,6,8]},{id:30,name:"No.030",active:[1,3,5,6,7,9],targets:[3,5,7]},{id:31,name:"No.031",active:[2,4,5,6,8,9],targets:[2,4,9]},{id:32,name:"No.032",active:[2,5,6,7,8,9],targets:[2,6,7]},{id:33,name:"No.033",active:[1,2,3,5,6,9],targets:[1,5,9]},{id:34,name:"No.034",active:[2,3,4,5,6,8],targets:[3,4,8]},{id:35,name:"No.035",active:[1,2,3,5,6,8],targets:[1,6,8]},{id:36,name:"No.036",active:[1,2,3,4,5,7],targets:[3,5,7]},{id:37,name:"No.037",active:[1,2,4,5,6,8,9],targets:[2,4,9]},{id:38,name:"No.038",active:[1,2,4,6,7,8,9],targets:[2,6,7]},{id:39,name:"No.039",active:[1,3,5,6,7,8,9],targets:[1,5,9]},{id:40,name:"No.040",active:[2,3,4,5,6,7,8],targets:[3,4,8]},{id:41,name:"No.041",active:[1,2,3,4,6,8,9],targets:[1,6,8]},{id:42,name:"No.042",active:[1,3,4,5,7,8,9],targets:[3,5,7]},{id:43,name:"No.043",active:[1,2,3,4,6,7,9],targets:[2,4,9]},{id:44,name:"No.044",active:[2,4,5,6,7,8,9],targets:[2,6,7]},{id:45,name:"No.045",active:[1,3,4,5,6,7,9],targets:[1,5,9]},{id:46,name:"No.046",active:[1,2,3,4,7,8,9],targets:[3,4,8]},{id:47,name:"No.047",active:[1,2,4,5,6,7,8],targets:[1,6,8]},{id:48,name:"No.048",active:[1,2,3,5,7,8,9],targets:[3,5,7]},{id:49,name:"No.049",active:[2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:50,name:"No.050",active:[1,2,3,4,6,7,8,9],targets:[2,6,7]},{id:51,name:"No.051",active:[1,3,4,5,6,7,8,9],targets:[1,5,9]},{id:52,name:"No.052",active:[1,2,3,4,5,6,8,9],targets:[3,4,8]},{id:53,name:"No.053",active:[1,2,3,4,6,7,8,9],targets:[1,6,8]},{id:54,name:"No.054",active:[1,2,3,5,6,7,8,9],targets:[3,5,7]},{id:55,name:"No.055",active:[1,2,3,5,6,7,8,9],targets:[2,4,9]},{id:56,name:"No.056",active:[2,4,5,6,7,8,9],targets:[2,6,7]},{id:57,name:"No.057",active:[1,3,4,5,6,7,9],targets:[1,5,9]},{id:58,name:"No.058",active:[1,2,3,4,7,8,9],targets:[3,4,8]},{id:59,name:"No.059",active:[1,2,4,5,6,7,8],targets:[1,6,8]},{id:60,name:"No.060",active:[1,2,3,5,7,8,9],targets:[3,5,7]},{id:61,name:"No.061",active:[1,2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:62,name:"No.062",active:[1,2,3,4,5,6,7,8,9],targets:[2,6,7]},{id:63,name:"No.063",active:[1,2,3,4,5,6,7,8,9],targets:[1,5,9]},{id:64,name:"No.064",active:[1,2,3,4,5,6,7,8,9],targets:[3,4,8]},{id:65,name:"No.065",active:[1,2,3,4,5,6,7,8,9],targets:[1,6,8]},{id:66,name:"No.066",active:[1,2,3,4,5,6,7,8,9],targets:[3,5,7]},{id:67,name:"No.067",active:[1,2,3,4,5,6,7,8,9],targets:[2,4,9]},{id:68,name:"No.068",active:[1,2,3,4,5,6,7,8,9],targets:[2,6,7]},{id:69,name:"No.069",active:[1,2,3,4,5,6,7,8,9],targets:[1,5,9]},{id:70,name:"No.070",active:[1,2,3,4,5,6,7,8,9],targets:[3,4,8]},{id:71,name:"No.071",active:[1,2,3,4,5,6,7,8,9],targets:[1,6,8]},{id:72,name:"No.072",active:[1,2,3,4,5,6,7,8,9],targets:[3,5,7]}];
@@ -309,17 +300,24 @@
         let timerInterval, timeLeft = 0, currentTotalTime = 0, lastValidLineCount = 0;
         let longPressTimer, pickerFace = 'B'; 
 
-        // 絕對唯一解答 (供冰雪精靈比對用)
+        // 排行榜用：開局攜帶精靈數
+        let selectedSpriteCount = 0;
+
+        // 絕對唯一解答 (供冰雪精靈與公佈解答使用)
         let absoluteSolution = null;
 
-        // 聖光精靈 (主動技) 系統
+        // 主動技精靈系統 (聖光/大地/生靈)
+        let isHolyEnabled = false;
+        let isEarthEnabled = false;
+        let isNatureEnabled = false;
         let holyLightUses = 2;  
-        let totalSavedHolyLights = 0; 
+        let earthUses = 2;
+        let natureUses = 1; // 生靈精靈：每關 1 次
         let activeHint = null;   
 
         // --- 9.0 統整被動精靈技能系統 ---
         const SPRITES = {
-            shadow: { id: 'shadow', name: '🟣 闇影', cd: 40, timer: 40, active: false, paused: false, theme: 'theme-shadow' },
+            shadow: { id: 'shadow', name: '🟣 闇影', cd: 20, timer: 20, active: false, paused: false, theme: 'theme-shadow' },
             ice: { id: 'ice', name: '❄️ 冰雪', cd: 50, timer: 50, active: false, paused: false, theme: 'theme-ice' },
             fire: { id: 'fire', name: '🔥 火焰', cd: 30, timer: 30, active: false, paused: false, theme: 'theme-fire' }
         };
@@ -404,7 +402,6 @@
             }
         }
 
-        // --- 核心流程 ---
         function selectLevel(lvl, btn) {
             selectedLevel = lvl;
             document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
@@ -428,13 +425,23 @@
             if (!nameInput) return alert("請輸入封印師名號！");
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            // 讀取精靈開關
+            // 讀取精靈開關與統計數量 (排行榜用)
+            isHolyEnabled = $('holy-assist-toggle').checked;
+            isEarthEnabled = $('earth-assist-toggle').checked;
+            isNatureEnabled = $('nature-assist-toggle').checked;
             SPRITES.shadow.active = $('shadow-assist-toggle').checked;
             SPRITES.ice.active = $('ice-assist-toggle').checked;
             SPRITES.fire.active = $('fire-assist-toggle').checked;
             
+            selectedSpriteCount = [isHolyEnabled, isEarthEnabled, isNatureEnabled, SPRITES.shadow.active, SPRITES.ice.active, SPRITES.fire.active].filter(Boolean).length;
+            
             playerName = nameInput; $('start-screen').style.display = 'none';
-            currentRound = 1; totalScore = 0; totalTimeSpent = 0; totalSavedHolyLights = 0;
+            currentRound = 1; totalScore = 0; totalTimeSpent = 0; 
+            
+            // 整場遊戲的主動技額度在此重置
+            holyLightUses = 2;  
+            earthUses = 2;
+
             roundPool = getShapesByLevel(selectedLevel);
             updateHUD(); loadRound(currentRound);
         }
@@ -456,26 +463,21 @@
             $('timer-disp').classList.remove('urgent');
 
             const config = ROUND_SETTINGS[round];
-            startTimer(config.time); roundStartTime = Date.now();
-
+            
             let solvable = false, attempts = 0, selectedShape = roundPool[round - 1], selectedTile;
-            let totalSolveSlots = 0;
             let finalTempBoard = null;
 
             while (!solvable && attempts < 50) {
-                totalSolveSlots = 0;
                 selectedTile = TARGET_TILES[Math.floor(Math.random() * TARGET_TILES.length)];
                 currentLayoutConfig = {};
                 for(let i=0; i<9; i++) currentLayoutConfig[i] = { type: 'EMPTY' };
                 selectedShape.active.forEach(pos => { 
                     currentLayoutConfig[pos-1] = { type: 'SOLVE' }; 
-                    totalSolveSlots++;
                 });
                 selectedShape.targets.forEach((pos, idx) => {
                     if (idx < selectedTile.blocks.length) {
                         const b = selectedTile.blocks[idx];
                         currentLayoutConfig[pos-1] = { type: 'FIXED', id: b.id, face: b.f };
-                        totalSolveSlots--; 
                     } else { currentLayoutConfig[pos-1] = { type: 'SOLVE' }; }
                 });
                 
@@ -495,10 +497,25 @@
             }
             if (!solvable) return alert("生成失敗");
 
-            // 儲存絕對唯一解供冰雪精靈階段二比對
             absoluteSolution = finalTempBoard.map(b => b ? {...b} : null);
 
-            // --- 精靈系統回合初始化 ---
+            // 執行關卡狀態初始化 (抽取為獨立函數以供生靈精靈重置使用)
+            initializeRoundState();
+            
+            // 生靈精靈：每關 1 次
+            natureUses = 1;
+
+            let levelInfo = $('level-info');
+            originalLevelInfoText = `${selectedShape.name} (通關+${config.base}分 | 速通+${config.bonus}分)`;
+            levelInfo.innerText = originalLevelInfoText;
+            levelInfo.style.color = "#f1c40f"; 
+            
+            startTimer(config.time); roundStartTime = Date.now();
+            renderGameGrid();
+            renderActionBar();
+        }
+
+        function initializeRoundState() {
             let neededIDs = new Set();
             solutionFixedRotations.clear();
             frozenBlocks.clear();
@@ -507,11 +524,25 @@
             shadowTurn = 0;
             permanentlyRemovedBlocks.clear(); 
             
+            // 將盤面恢復成初始預設 (排除大地精靈造成的 TYPE = EMPTY 破壞)
+            // 需要依賴 absoluteSolution 來還原 currentLayoutConfig 的 type
             for(let i=0; i<9; i++) {
-                if (finalTempBoard[i]) {
-                    neededIDs.add(finalTempBoard[i].id);
+                if(absoluteSolution[i]) {
+                    if (absoluteSolution[i].isFixed) {
+                        currentLayoutConfig[i].type = 'FIXED';
+                    } else {
+                        currentLayoutConfig[i].type = 'SOLVE';
+                    }
+                } else {
+                    currentLayoutConfig[i].type = 'EMPTY';
+                }
+            }
+            
+            for(let i=0; i<9; i++) {
+                if (absoluteSolution[i]) {
+                    neededIDs.add(absoluteSolution[i].id);
                     if (currentLayoutConfig[i].type === 'FIXED') {
-                        solutionFixedRotations.set(i, finalTempBoard[i].rot);
+                        solutionFixedRotations.set(i, absoluteSolution[i].rot);
                         shadowTargetIndices.push(i);
                     }
                 }
@@ -524,46 +555,60 @@
                 s.paused = false;
             });
 
-            // 聖光精靈初始化：每場固定 2 次
-            holyLightUses = 2;
-            renderActionBar();
-            // ------------------------
-
-            let levelInfo = $('level-info');
-            originalLevelInfoText = `${selectedShape.name} (通關+${config.base}分 | 速通+${config.bonus}分)`;
-            levelInfo.innerText = originalLevelInfoText;
-            levelInfo.style.color = "#f1c40f"; 
-            
             userBoard = Array(9).fill(null);
             for(let i=0; i<9; i++) {
                 if (currentLayoutConfig[i].type === 'FIXED') {
                     userBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true };
                 }
             }
-            renderGameGrid();
+            activeHint = null;
         }
 
         // --- 技能列渲染與互動 ---
         function renderActionBar() {
             let bar = $('sprite-action-bar');
             bar.innerHTML = '';
-            bar.style.display = 'flex'; // 永遠顯示，因為聖光一定在
-
-            // 1. 生成 ✨ 聖光精靈 (主動技，永遠存在)
-            let holyBtn = document.createElement('div');
-            holyBtn.id = 'btn-sp-holy';
-            holyBtn.className = `sprite-btn theme-holy ${holyLightUses <= 0 ? 'disabled' : ''}`;
-            holyBtn.innerHTML = `✨ 聖光 <span class="sp-time">${holyLightUses}次</span>`;
-            holyBtn.onclick = activateHolyLight;
-            bar.appendChild(holyBtn);
-
-            // 2. 生成其他被動精靈 (根據玩家開局勾選)
+            
             let activeSprites = Object.values(SPRITES).filter(s => s.active);
+            if (!isHolyEnabled && !isEarthEnabled && !isNatureEnabled && activeSprites.length === 0) {
+                bar.style.display = 'none'; return;
+            }
+            bar.style.display = 'flex'; 
+
+            if (isHolyEnabled) {
+                let holyBtn = document.createElement('div');
+                holyBtn.id = 'btn-sp-holy';
+                holyBtn.className = `sprite-btn theme-holy ${holyLightUses <= 0 ? 'disabled' : ''}`;
+                holyBtn.innerHTML = `✨聖光 <span>${holyLightUses}次</span>`;
+                holyBtn.onclick = activateHolyLight;
+                bar.appendChild(holyBtn);
+            }
+
+            if (isEarthEnabled) {
+                let earthBtn = document.createElement('div');
+                earthBtn.id = 'btn-sp-earth';
+                earthBtn.className = `sprite-btn theme-earth ${earthUses <= 0 ? 'disabled' : ''}`;
+                earthBtn.innerHTML = `🟤大地 <span>${earthUses}次</span>`;
+                earthBtn.onclick = activateEarthSprite;
+                bar.appendChild(earthBtn);
+            }
+
+            if (isNatureEnabled) {
+                let natureBtn = document.createElement('div');
+                natureBtn.id = 'btn-sp-nature';
+                natureBtn.className = `sprite-btn theme-nature ${natureUses <= 0 ? 'disabled' : ''}`;
+                natureBtn.innerHTML = `🟢生靈 <span>${natureUses}次</span>`;
+                natureBtn.onclick = activateNatureSprite;
+                bar.appendChild(natureBtn);
+            }
+
             activeSprites.forEach(s => {
                 let btn = document.createElement('div');
                 btn.id = `btn-sp-${s.id}`;
                 btn.className = `sprite-btn ${s.theme} ${s.paused ? 'disabled' : ''}`;
-                btn.innerHTML = `${s.name} <span class="sp-time">${s.timer}s</span>`;
+                // 簡化被動精靈按鈕文字以適應版面
+                let shortName = s.name.substring(0, 4);
+                btn.innerHTML = `${shortName} <span>${s.timer}s</span>`;
                 btn.onclick = () => toggleSprite(s.id);
                 bar.appendChild(btn);
             });
@@ -573,7 +618,7 @@
             let btn = $(`btn-sp-${id}`);
             if(btn) {
                 let s = SPRITES[id];
-                btn.querySelector('.sp-time').innerText = `${s.timer}s`;
+                btn.querySelector('span').innerText = `${s.timer}s`;
                 if(s.paused) btn.classList.add('disabled');
                 else btn.classList.remove('disabled');
             }
@@ -594,7 +639,6 @@
                 timeLeft--; updateTimerDisplay(); updateTimeBar();
                 if (timeLeft <= 10) $('timer-disp').classList.add('urgent');
                 
-                // 處理被動精靈冷卻
                 ['shadow', 'ice', 'fire'].forEach(key => {
                     let sp = SPRITES[key];
                     if (sp.active && !sp.paused && !isRoundWon && !isSolverUsed) {
@@ -622,7 +666,6 @@
 
             if (key === 'fire') {
                 if (unneededBlocks.length > 0) {
-                    // 【第一階段】燒毀未使用的干擾魔石 (永久排除)
                     let removedID = unneededBlocks.pop();
                     permanentlyRemovedBlocks.add(removedID);
                     let removedFromBoard = false;
@@ -640,26 +683,20 @@
                     }
                     if (!removedFromBoard) renderGameGrid(); 
                     playSound('fire'); 
-                    levelInfo.innerText = removedFromBoard 
-                        ? `🔥 火焰精靈：已為您燒毀場上 1 個干擾方塊！` 
-                        : `🔥 火焰精靈：已從清單燒毀 1 個干擾方塊！`;
+                    levelInfo.innerText = removedFromBoard ? `🔥 火焰精靈：燒毀場上 1 個干擾方塊！` : `🔥 火焰精靈：從清單燒毀 1 個干擾方塊！`;
                     levelInfo.style.color = "#ff7675";
                     if ($('picker-modal').style.display === 'flex') renderPickerGrid();
                     
                 } else {
-                    // 【第二階段】燒毀放錯的方塊退回選擇區
                     let { wrongIndex } = getSmartSolution(userBoard);
-                    
                     if (wrongIndex !== -1 && userBoard[wrongIndex] && !userBoard[wrongIndex].isFixed) {
                         let cell = $('grid-container').children[wrongIndex + 1];
                         if(cell) cell.classList.add('fire-flash');
-                        
                         setTimeout(() => {
                             userBoard[wrongIndex] = null; 
                             if (activeHint && activeHint.index === wrongIndex) activeHint = null;
                             renderGameGrid();
                         }, 500);
-                        
                         playSound('fire');
                         levelInfo.innerText = `🔥 火焰精靈：燒毀場上 1 個錯誤方塊並退回清單！`;
                         levelInfo.style.color = "#ff7675";
@@ -671,7 +708,6 @@
                  }
 
             } else if (key === 'ice') {
-                // 【階段一】檢查指定的固定魔石是否都已凍結並轉正
                 let unfrozenFixed = [];
                 for(let i=0; i<9; i++) {
                     if (currentLayoutConfig[i].type === 'FIXED' && !frozenBlocks.has(i)) {
@@ -694,10 +730,9 @@
                     levelInfo.style.color = "#74b9ff";
                     
                 } else {
-                    // 【階段二】所有固定魔石已就位，凍結玩家完全正確的「自選魔石」
                     let correctUserIndices = [];
                     for (let i = 0; i < 9; i++) {
-                        if (userBoard[i] && !userBoard[i].isFixed && !frozenBlocks.has(i)) {
+                        if (userBoard[i] && !userBoard[i].isFixed && !frozenBlocks.has(i) && currentLayoutConfig[i].type !== 'EMPTY') {
                             let absBlock = absoluteSolution[i];
                             if (absBlock && userBoard[i].id === absBlock.id && userBoard[i].face === absBlock.face && userBoard[i].rot === absBlock.rot) {
                                 correctUserIndices.push(i);
@@ -719,9 +754,7 @@
                 }
 
             } else if (key === 'shadow') {
-                // 過濾出還沒被完全吞噬（小於 4 格）的指定魔石
                 let validTargets = shadowTargetIndices.filter(idx => !shadowEaten[idx] || shadowEaten[idx].length < 4);
-                
                 if (validTargets.length > 0) {
                     let targetIdx = validTargets[shadowTurn % validTargets.length];
                     if (!shadowEaten[targetIdx]) shadowEaten[targetIdx] = [];
@@ -744,7 +777,6 @@
                 }
             }
 
-            // 狀態文字還原
             setTimeout(() => {
                 if(!isRoundWon && !isSolverUsed && levelInfo.innerText.includes("精靈")) {
                     levelInfo.innerText = originalLevelInfoText;
@@ -753,6 +785,7 @@
             }, 4000);
         }
 
+        // ✨ 聖光精靈：主動技
         function activateHolyLight() {
             if (isRoundWon || activeHint) return; 
 
@@ -801,10 +834,96 @@
                 if (btnHoly) {
                     btnHoly.classList.add('flash-intense');
                     setTimeout(() => btnHoly.classList.remove('flash-intense'), 1500);
-                    btnHoly.innerHTML = `✨ 聖光 <span class="sp-time">${holyLightUses}次</span>`;
+                    btnHoly.innerHTML = `✨聖光 <span>${holyLightUses}次</span>`;
                     if (holyLightUses <= 0) btnHoly.classList.add('disabled');
                 }
                 renderGameGrid(); 
+            }
+        }
+
+        // 🟤 大地精靈：主動技 
+        function activateEarthSprite() {
+            if (isRoundWon) return; 
+
+            let emptySolveSlots = [];
+            for(let i=0; i<9; i++) {
+                if (currentLayoutConfig[i].type === 'SOLVE' && userBoard[i] === null) {
+                    emptySolveSlots.push(i);
+                }
+            }
+
+            if (earthUses <= 0) {
+                alert("大地精靈的法力已耗盡！"); return;
+            }
+            if (emptySolveSlots.length === 0) {
+                alert("🟤 目前沒有可以消除的空格！(若卡關請先拔除錯的方塊)"); return;
+            }
+
+            let targetIdx = emptySolveSlots[Math.floor(Math.random() * emptySolveSlots.length)];
+            
+            earthUses--;
+            currentLayoutConfig[targetIdx].type = 'EMPTY'; 
+            userBoard[targetIdx] = null; 
+            
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            playNote(300, audioCtx.currentTime, 0.1); 
+            playNote(150, audioCtx.currentTime + 0.1, 0.3);
+
+            let levelInfo = $('level-info');
+            levelInfo.innerText = `🟤 大地精靈：板塊崩塌！已為您消除 1 個空格降低難度！`;
+            levelInfo.style.color = "#27ae60";
+
+            let btnEarth = $('btn-sp-earth');
+            if (btnEarth) {
+                btnEarth.classList.add('flash-intense');
+                setTimeout(() => btnEarth.classList.remove('flash-intense'), 1500);
+                btnEarth.innerHTML = `🟤大地 <span>${earthUses}次</span>`;
+                if (earthUses <= 0) btnEarth.classList.add('disabled');
+            }
+            
+            renderGameGrid(); 
+        }
+
+        // 🟢 生靈精靈：主動技 (重置關卡)
+        function activateNatureSprite() {
+            if (isRoundWon || isSolverUsed) return;
+            
+            if (natureUses <= 0) {
+                alert("生靈精靈的法力已耗盡！每關僅能重置 1 次。"); return;
+            }
+
+            if (confirm("🟢 確定要發動生靈精靈嗎？\n\n本關時間與盤面將完全重置！\n但聖光與大地的使用次數【不會】復原。")) {
+                natureUses--;
+                
+                // 播放生機盎然的音效
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+                playNote(440, now, 0.1); 
+                playNote(554, now + 0.1, 0.1); 
+                playNote(659, now + 0.2, 0.2); 
+
+                // 重新初始化本關狀態 (清空被動精靈與盤面)
+                initializeRoundState();
+                
+                // 時間與計時器重置
+                roundStartTime = Date.now();
+                startTimer(currentTotalTime);
+                
+                let levelInfo = $('level-info');
+                levelInfo.innerText = `🟢 生靈精靈：時光逆轉！關卡已重置！`;
+                levelInfo.style.color = "#2ecc71";
+
+                let btnNature = $('btn-sp-nature');
+                if (btnNature) {
+                    btnNature.classList.add('flash-intense');
+                    setTimeout(() => btnNature.classList.remove('flash-intense'), 1500);
+                    btnNature.innerHTML = `🟢生靈 <span>${natureUses}次</span>`;
+                    btnNature.classList.add('disabled');
+                }
+                
+                // 重新渲染 Action Bar 以確保被動精靈按鈕狀態也更新為正常
+                renderActionBar();
+                renderGameGrid();
             }
         }
 
@@ -841,7 +960,6 @@
             if (!isSolverUsed) {
                 const config = ROUND_SETTINGS[currentRound];
                 totalScore += config.base + (spent <= 60 ? config.bonus : 0);
-                totalSavedHolyLights += holyLightUses; 
             }
             updateHUD(); currentRound++;
             if (currentRound > 6) showEndScreen(); else loadRound(currentRound);
@@ -862,18 +980,32 @@
                     userBoard[i].face = currentLayoutConfig[i].face; 
                 } else { userBoard[i] = null; }
             }
-            // 闇影侵蝕與凍結狀態屬於永久增益，不在此清除
             renderGameGrid(); lastValidLineCount = 0;
         }
 
         // --- 排行榜 ---
         function saveRecord(now) {
-            const record = { name: playerName, score: totalScore, time: totalTimeSpent, hints: totalSavedHolyLights, lvl: selectedLevel, date: now };
-            let lb = JSON.parse(localStorage.getItem('coludoku_lb_v10') || "[]");
+            // 排行榜排序：1. 總分高  2. 精靈攜帶數少  3. 耗時少
+            const record = { 
+                name: playerName, 
+                score: totalScore, 
+                spriteCount: selectedSpriteCount, 
+                time: totalTimeSpent, 
+                lvl: selectedLevel, 
+                date: now 
+            };
+            let lb = JSON.parse(localStorage.getItem('coludoku_lb_v12') || "[]");
             lb.push(record);
-            lb.sort((a,b) => b.score - a.score || b.hints - a.hints || a.time - b.time);
+            
+            // 排序邏輯實作
+            lb.sort((a,b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if (a.spriteCount !== b.spriteCount) return a.spriteCount - b.spriteCount;
+                return a.time - b.time;
+            });
+
             if (lb.length > 500) lb = lb.slice(0, 500);
-            localStorage.setItem('coludoku_lb_v10', JSON.stringify(lb));
+            localStorage.setItem('coludoku_lb_v12', JSON.stringify(lb));
             return lb;
         }
 
@@ -896,7 +1028,7 @@
             $('end-title-desc').innerText = `✨ 恭喜獲得【${getRankTitle(totalScore)}封印師】稱號！ (挑戰 L${selectedLevel})`;
             
             $('end-score').innerText = `${totalScore}`;
-            $('end-hints').innerText = `${totalSavedHolyLights}`;
+            $('end-hints').innerText = `${selectedSpriteCount}`; // 顯示攜帶的精靈數
             $('end-time').innerText = formatTime(totalTimeSpent);
             
             const now = Date.now(), lbData = saveRecord(now);
@@ -912,7 +1044,7 @@
                 let boardHtml = `<div class="level-board"><div class="level-board-title">LEVEL ${i} 排行榜</div><table class="lb-mini-table">`;
                 if (lvlData.length === 0) boardHtml += `<tr><td style="text-align:center; color:#999; padding:15px 0;">尚無紀錄</td></tr>`;
                 else lvlData.forEach((r, idx) => { 
-                    boardHtml += `<tr><td class="rank">${idx + 1}</td><td class="name">${r.name}</td><td class="score-time">${r.score}-<span class="hint-icon">${r.hints || 0}</span> ${formatTime(r.time)}</td></tr>`; 
+                    boardHtml += `<tr><td class="rank">${idx + 1}</td><td class="name">${r.name}</td><td class="score-time">${r.score}分/🧚${r.spriteCount}/ ${formatTime(r.time)}</td></tr>`; 
                 });
                 boardHtml += `</table></div>`; container.innerHTML += boardHtml;
             }
@@ -936,12 +1068,10 @@
                         div.classList.add(block.isFixed ? 'fixed' : 'user-placed');
                         if (frozenBlocks.has(i)) div.classList.add('frozen');
 
-                        // 建立會跟隨角度旋轉的容器
                         div.innerHTML = `<div class="block-content" style="position:absolute; width:100%; height:100%; transform: rotate(${block.rot * 90}deg); display:flex; justify-content:center; align-items:center;">
                             <img src="images/block_${block.face}-0${block.id}.png" class="block-image" draggable="false">
                         </div>`;
                         
-                        // 🟣 闇影侵蝕視覺疊加 (附加在旋轉容器內，實現實體跟隨)
                         if (shadowEaten[i]) {
                             const contentDiv = div.querySelector('.block-content');
                             shadowEaten[i].forEach(cornerIdx => {
@@ -951,7 +1081,6 @@
                             });
                         }
                         
-                        // 糾錯特效
                         if (activeHint && activeHint.index === i) {
                             div.innerHTML += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0, 0, 0, 0.3); z-index:10; display:flex; justify-content:center; align-items:center; border-radius:6px; border: 2px solid #e74c3c; box-shadow: inset 0 0 15px rgba(231, 76, 60, 0.8); pointer-events:none; animation: pulseRed 1.5s infinite;">
                                 <img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.9; transform: rotate(0deg); filter: drop-shadow(0 0 5px #f1c40f);">
@@ -1017,7 +1146,7 @@
         
         function getAvailableBlocks() { 
             const used = new Set(); 
-            userBoard.forEach(b => { if(b) used.add(b.id); }); 
+            userBoard.forEach((b, i) => { if(b && currentLayoutConfig[i].type !== 'EMPTY') used.add(b.id); }); 
             return [1,2,3,4,5,6,7,8,9].filter(id => !used.has(id) && !permanentlyRemovedBlocks.has(id)); 
         }
 
@@ -1064,16 +1193,14 @@
         function getFullGrid(boardState = userBoard) {
             let fullGrid = Array(6).fill().map(() => Array(6).fill(0));
             for(let i=0; i<9; i++) {
-                if(!boardState[i]) continue;
+                if(!boardState[i] || currentLayoutConfig[i].type === 'EMPTY') continue;
                 let b = boardState[i], r = Math.floor(i / 3) * 2, c = (i % 3) * 2;
                 
-                // 1. 取得基礎未旋轉矩陣
                 let baseMatrix = [
                     [BLOCKS[b.id][b.face][0][0], BLOCKS[b.id][b.face][0][1]],
                     [BLOCKS[b.id][b.face][1][0], BLOCKS[b.id][b.face][1][1]]
                 ];
                 
-                // 2. 🟣 闇影精靈：在基礎矩陣挖空 (將被吃掉的角落視為 0 百搭)
                 if (shadowEaten[i]) {
                     if (shadowEaten[i].includes(0)) baseMatrix[0][0] = 0;
                     if (shadowEaten[i].includes(1)) baseMatrix[0][1] = 0;
@@ -1081,7 +1208,6 @@
                     if (shadowEaten[i].includes(3)) baseMatrix[1][1] = 0;
                 }
 
-                // 3. 旋轉帶有黑洞的矩陣
                 let matrix = getRotatedMatrix(baseMatrix, b.rot);
                 
                 fullGrid[r][c] = matrix[0][0]; fullGrid[r][c+1] = matrix[0][1];
@@ -1096,11 +1222,10 @@
             return values.length > 0 && new Set(values).size === values.length;
         }
 
-        // 絕對唯一性驗證
         function isValid(boardState) {
             let seenIDs = new Set();
             for (let i = 0; i < 9; i++) {
-                if (boardState[i]) {
+                if (boardState[i] && currentLayoutConfig[i].type !== 'EMPTY') {
                     if (seenIDs.has(boardState[i].id)) return false;
                     seenIDs.add(boardState[i].id);
                 }
@@ -1122,14 +1247,18 @@
             let currentValidLineCount = 0;
             
             for (let r = 0; r < 3; r++) {
-                let cnt = (userBoard[r*3]?1:0) + (userBoard[r*3+1]?1:0) + (userBoard[r*3+2]?1:0);
+                let cnt = (userBoard[r*3] && currentLayoutConfig[r*3].type !== 'EMPTY' ?1:0) + 
+                          (userBoard[r*3+1] && currentLayoutConfig[r*3+1].type !== 'EMPTY'?1:0) + 
+                          (userBoard[r*3+2] && currentLayoutConfig[r*3+2].type !== 'EMPTY'?1:0);
                 if (cnt > 1 && isLineValid(grid, r*2, true) && isLineValid(grid, r*2+1, true)) {
                     const glow = document.createElement('div'); glow.className = 'glow-bar glow-row'; glow.style.top = (r * 33.33 + 0.5) + '%';
                     glowLayer.appendChild(glow); currentValidLineCount++;
                 }
             }
             for (let c = 0; c < 3; c++) {
-                let cnt = (userBoard[c]?1:0) + (userBoard[c+3]?1:0) + (userBoard[c+6]?1:0);
+                let cnt = (userBoard[c] && currentLayoutConfig[c].type !== 'EMPTY'?1:0) + 
+                          (userBoard[c+3] && currentLayoutConfig[c+3].type !== 'EMPTY'?1:0) + 
+                          (userBoard[c+6] && currentLayoutConfig[c+6].type !== 'EMPTY'?1:0);
                 if (cnt > 1 && isLineValid(grid, c*2, false) && isLineValid(grid, c*2+1, false)) {
                     const glow = document.createElement('div'); glow.className = 'glow-bar glow-col'; glow.style.left = (c * 33.33 + 0.5) + '%';
                     glowLayer.appendChild(glow); currentValidLineCount++;
@@ -1155,7 +1284,7 @@
                 $('grid-container').classList.add('win-glow');
                 $('btn-next').style.display = 'inline-block'; 
                 $('top-ui-controls').style.display = 'none';
-                $('sprite-action-bar').style.display = 'none';
+                $('sprite-action-bar').style.display = 'none'; 
             }
         }
         
@@ -1214,7 +1343,7 @@
 
             for (let i = 0; i < 9; i++) {
                 let b = board[i];
-                if (b && !b.isFixed) {
+                if (b && !b.isFixed && currentLayoutConfig[i].type !== 'EMPTY') {
                     validSpecs[i] = { id: b.id, face: b.face };
                     let used = new Set(fixedIDs); let dup = false;
                     for(let k=0; k<=i; k++) {
@@ -1240,16 +1369,18 @@
             return { solution: finalSolution, wrongIndex: wrongIndex };
         }
 
-function forceSolve(manual = true) {
+        function forceSolve(manual = true) {
             clearInterval(timerInterval);
             
             setTimeout(() => {
-                // 直接調用開局生成的「絕對正解」，不再順著玩家的錯誤盤面推導
                 if (absoluteSolution) {
-                    activeHint = null; // 清除畫面上可能殘留的聖光虛影與紅框
+                    activeHint = null; 
                     
-                    // 將整個盤面強制覆寫為絕對正解
-                    userBoard = absoluteSolution.map(b => b ? {...b} : null);
+                    userBoard = absoluteSolution.map((b, i) => {
+                        if (currentLayoutConfig[i].type === 'EMPTY') return null; 
+                        return b ? {...b} : null;
+                    });
+                    
                     renderGameGrid();
                     
                     $('grid-container').classList.add('win-glow');

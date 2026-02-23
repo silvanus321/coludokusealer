@@ -89,7 +89,7 @@
         
         /* 各精靈漸層主題色 */
         .sprite-btn.theme-holy { background: linear-gradient(135deg, #f39c12, #2c3e50); }
-        .sprite-btn.theme-earth { background: linear-gradient(135deg, #27ae60, #2c3e50); }
+        .sprite-btn.theme-earth { background: linear-gradient(135deg, #d2691e, #2c3e50); }
         .sprite-btn.theme-nature { background: linear-gradient(135deg, #2ecc71, #2c3e50); } /* 綠色生靈 */
         .sprite-btn.theme-shadow { background: linear-gradient(135deg, #8e44ad, #2c3e50); }
         .sprite-btn.theme-ice { background: linear-gradient(135deg, #2980b9, #2c3e50); }
@@ -157,7 +157,7 @@
                     <input type="checkbox" id="holy-assist-toggle" style="transform: scale(1.3);"> 
                     ✨ 聖光精靈 (主動: 照亮正確方塊, 2次/場)
                 </label>
-                <label style="color: #27ae60; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <label style="color: #d2691e; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="earth-assist-toggle" style="transform: scale(1.3);"> 
                     🟤 大地精靈 (主動: 消除一個空格, 2次/場)
                 </label>
@@ -871,7 +871,7 @@
 
             let levelInfo = $('level-info');
             levelInfo.innerText = `🟤 大地精靈：板塊崩塌！已為您消除 1 個空格降低難度！`;
-            levelInfo.style.color = "#27ae60";
+            levelInfo.style.color = "#d2691e";
 
             let btnEarth = $('btn-sp-earth');
             if (btnEarth) {
@@ -1405,3 +1405,4 @@
     </script>
 </body>
 </html>
+

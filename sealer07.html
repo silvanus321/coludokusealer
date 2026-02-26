@@ -255,7 +255,7 @@
                     <div style="font-weight:bold; color:#2c3e50;">🎁 試煉獎勵：</div>
                     <div style="color:#2ecc71;">獲得經驗值：<span id="end-exp-gain">+0 EXP</span></div>
                     <div id="end-level-up-msg" style="color:#f39c12; font-weight:bold; display:none;">🎉 封印師升級了！解鎖新難度！</div>
-                    <div style="color:#e74c3c;">獲得魔物點數：<span id="end-pts-gain">+0 點</span> <small>(需通關6局)</small></div>
+                    <div style="color:#e74c3c;">獲得能力點數：<span id="end-pts-gain">+0 點</span> <small>(需通關6局)</small></div>
                 </div>
             </div>
             <div class="level-boards-container" id="level-boards"></div>
@@ -374,7 +374,7 @@
         function upgradeSkill(id) {
             let cost = getSkillCost(playerProfile.skills[id]);
             if (playerProfile.skills[id] >= playerProfile.lvl) return alert("精靈等級不能超過你當前的封印師等級！請先去提升等級。");
-            if (playerProfile.points < cost) return alert(`魔物點數不足！升級需要 ${cost} 點。去打敗更高難度的魔物吧！`);
+            if (playerProfile.points < cost) return alert(`能力點數不足！升級需要 ${cost} 點。去打敗更高難度的魔物吧！`);
             playerProfile.points -= cost;
             playerProfile.skills[id]++;
             saveProfile();
@@ -777,7 +777,7 @@
 
             if (stagesCleared === 6) {
                 playerProfile.totalWins += 1;
-                totalGainedPoints = 1;
+                totalGainedPoints = selectedLevel;
             } else {
                 const failMultipliers = { 0:0.10, 1:0.20, 2:0.35, 3:0.50, 4:0.65, 5:0.80 };
                 totalGainedExp = Math.floor(totalGainedExp * failMultipliers[stagesCleared]);
@@ -893,3 +893,4 @@
 </body>
 
 </html>
+

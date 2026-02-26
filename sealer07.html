@@ -277,7 +277,10 @@
         if(playerProfile.totalWins === undefined) playerProfile.totalWins = 0;
         if(playerProfile.totalPlayTime === undefined) playerProfile.totalPlayTime = 0;
 
-        function getExpForNextLevel(lvl) { return lvl >= 99 ? 0 : Math.floor(100 * Math.pow(lvl, 1.5)); }
+        function getExpForNextLevel(lvl) { 
+            return lvl >= 99 ? 0 : Math.floor(1000 + 99000 * Math.pow((lvl - 1) / 97, 2)); 
+        }
+
         function getUnlockedMaxTrial(lvl) { return Math.min(Math.floor(lvl / 2) + 1, 50); }
         function getSkillCost(lvl) { return lvl >= 99 ? 0 : Math.floor(Math.pow(lvl, 2) / 20) + 1; }
         
@@ -299,22 +302,18 @@
         // --- 單關倍率結算系統 ---
         function calculateSingleRoundExp(trialLevel, timeSpentSeconds) {
             const baseExp = trialLevel * 50;
-            let finalExp = 0, pts = 0;
+            let finalExp = 0;
 
             if (timeSpentSeconds <= 30) {
                 finalExp = Math.floor(baseExp * 2.0);
-                pts = trialLevel;
             } else if (timeSpentSeconds <= 60) {
                 finalExp = Math.floor(baseExp * 1.5);
-                pts = trialLevel;
             } else if (timeSpentSeconds <= 120) {
                 finalExp = Math.floor(baseExp * 1.0);
-                pts = trialLevel;
             } else {
                 finalExp = 10; 
-                pts = 0;       
             }
-            return { exp: finalExp, pts: pts };
+            return { exp: finalExp };
         }
 
         // 格式化總時長為 HH:MM:SS
@@ -735,7 +734,6 @@
                 stagesCleared++;
                 let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
                 totalGainedExp += reward.exp;
-                totalGainedPoints += reward.pts;
             }
 
             updateHUD(); currentRound++;
@@ -775,10 +773,12 @@
                 stagesCleared++;
                 let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
                 totalGainedExp += reward.exp;
-                totalGainedPoints += reward.pts;
             }
 
-            if (stagesCleared < 6) {
+            if (stagesCleared === 6) {
+                playerProfile.totalWins += 1;
+                totalGainedPoints = 1;
+            } else {
                 const failMultipliers = { 0:0.10, 1:0.20, 2:0.35, 3:0.50, 4:0.65, 5:0.80 };
                 totalGainedExp = Math.floor(totalGainedExp * failMultipliers[stagesCleared]);
                 totalGainedPoints = 0; 
@@ -786,10 +786,6 @@
             
             playerProfile.totalPlayTime += totalTimeSpent;
             
-            if (stagesCleared === 6) {
-                playerProfile.totalWins += 1;
-            }
-
             playerProfile.exp += totalGainedExp;
             playerProfile.points += totalGainedPoints;
             

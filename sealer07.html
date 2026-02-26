@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>色獨封印師 (16.0 戰績排行 + 全武裝版)</title>
+    <title>色獨封印師 (16.1 戰績排行 + 2x3能力面板)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
@@ -132,9 +132,12 @@
         .rpg-stat { font-size: 0.85rem; color: #ecf0f1; display: flex; justify-content: space-between; margin-bottom: 5px; }
         .rpg-global-stat { font-size: 0.8rem; color: #bdc3c7; display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 5px; }
         
-        .skill-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 5px; }
-        .skill-row span { font-size: 0.9rem; display: flex; align-items: center; gap: 5px; font-weight: bold; }
-        .upgrade-btn { background: #3498db; color: white; border: none; border-radius: 5px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        /* 2x3 技能網格樣式 */
+        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+        .skill-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 5px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .skill-cell span { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; display: flex; align-items: center; gap: 3px; }
+        .skill-cell small { color: #bdc3c7; font-size: 0.7rem; font-weight: normal; }
+        .upgrade-btn { background: #3498db; color: white; border: none; border-radius: 5px; padding: 5px 0; width: 100%; font-size: 0.75rem; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         .upgrade-btn:hover { background: #2980b9; }
         .upgrade-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
 
@@ -181,29 +184,31 @@
             <div style="margin: 10px auto; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); width: 90%; max-width: 320px;">
                 <div style="color: #ecf0f1; font-weight: bold; text-align: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">【 封印師能力 】</div>
                 
-                <div class="skill-row" style="color: #f1c40f;">
-                    <span>✨聖光 <small>[Lv.<span id="lvl-holy">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-holy" onclick="upgradeSkill('holy')">升級</button>
-                </div>
-                <div class="skill-row" style="color: #d2691e;">
-                    <span>🟤大地 <small>[Lv.<span id="lvl-earth">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-earth" onclick="upgradeSkill('earth')">升級</button>
-                </div>
-                <div class="skill-row" style="color: #2ecc71;">
-                    <span>🟢生靈 (補血) <small>[Lv.<span id="lvl-nature">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-nature" onclick="upgradeSkill('nature')">升級</button>
-                </div>
-                <div class="skill-row" style="color: #9b59b6;">
-                    <span>🟣闇影 <small>[Lv.<span id="lvl-shadow">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-shadow" onclick="upgradeSkill('shadow')">升級</button>
-                </div>
-                <div class="skill-row" style="color: #74b9ff;">
-                    <span>❄️冰雪 <small>[Lv.<span id="lvl-ice">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-ice" onclick="upgradeSkill('ice')">升級</button>
-                </div>
-                <div class="skill-row" style="color: #ff7675;">
-                    <span>🔥火焰 <small>[Lv.<span id="lvl-fire">1</span>]</small></span>
-                    <button class="upgrade-btn" id="up-fire" onclick="upgradeSkill('fire')">升級</button>
+                <div class="skills-grid">
+                    <div class="skill-cell" style="color: #f1c40f;">
+                        <span>✨聖光 <small>[Lv.<span id="lvl-holy">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-holy" onclick="upgradeSkill('holy')">升級</button>
+                    </div>
+                    <div class="skill-cell" style="color: #d2691e;">
+                        <span>🟤大地 <small>[Lv.<span id="lvl-earth">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-earth" onclick="upgradeSkill('earth')">升級</button>
+                    </div>
+                    <div class="skill-cell" style="color: #2ecc71;">
+                        <span>🟢生靈(補血) <small>[Lv.<span id="lvl-nature">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-nature" onclick="upgradeSkill('nature')">升級</button>
+                    </div>
+                    <div class="skill-cell" style="color: #9b59b6;">
+                        <span>🟣闇影 <small>[Lv.<span id="lvl-shadow">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-shadow" onclick="upgradeSkill('shadow')">升級</button>
+                    </div>
+                    <div class="skill-cell" style="color: #74b9ff;">
+                        <span>❄️冰雪 <small>[Lv.<span id="lvl-ice">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-ice" onclick="upgradeSkill('ice')">升級</button>
+                    </div>
+                    <div class="skill-cell" style="color: #ff7675;">
+                        <span>🔥火焰 <small>[Lv.<span id="lvl-fire">1</span>]</small></span>
+                        <button class="upgrade-btn" id="up-fire" onclick="upgradeSkill('fire')">升級</button>
+                    </div>
                 </div>
             </div>
 
@@ -279,10 +284,10 @@
         ============================================================== */
         let playerProfile = JSON.parse(localStorage.getItem('coludoku_rpg_v16')) || {
             name: "", lvl: 1, exp: 0, points: 0,
-            totalWins: 0, totalPlayTime: 0, // 核心排行數據
+            totalWins: 0, totalPlayTime: 0, 
             skills: { holy: 1, earth: 1, nature: 1, shadow: 1, ice: 1, fire: 1 }
         };
-        // 相容舊紀錄
+        // 相容舊紀錄防呆
         if(playerProfile.totalWins === undefined) playerProfile.totalWins = 0;
         if(playerProfile.totalPlayTime === undefined) playerProfile.totalPlayTime = 0;
 
@@ -386,7 +391,7 @@
             if (type === 'action') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
             else if (type === 'win') { playNote(523.25, now, 0.1); playNote(659.25, now + 0.1, 0.1); playNote(783.99, now + 0.2, 0.4); }
             else if (type === 'bonus') { playNote(880, now, 0.1); playNote(1760, now + 0.1, 0.2); }
-            else if (type === 'error') { playNote(150, now, 0.2); playNote(100, now + 0.2, 0.3); } // 錯誤音效
+            else if (type === 'error') { playNote(150, now, 0.2); playNote(100, now + 0.2, 0.3); } 
             else if (type === 'ice') { osc.type='sine'; osc.frequency.setValueAtTime(1200,now); osc.frequency.exponentialRampToValueAtTime(2000,now+0.1); gainNode.gain.setValueAtTime(0.2,now); gainNode.gain.exponentialRampToValueAtTime(0.01,now+0.2); osc.start(now); osc.stop(now+0.2); }
         }
         function playNote(freq, time, dur) { const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'square'; osc.frequency.value = freq; gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + dur); osc.start(time); osc.stop(time + dur); }
@@ -449,7 +454,7 @@
             totalGainedExp = 0;
             totalGainedPoints = 0;
             stagesCleared = 0;
-            totalTimeSpent = 0; // 重置整局的耗時紀錄
+            totalTimeSpent = 0; 
             
             initRunSprites();
             loadRound(currentRound);
@@ -709,7 +714,6 @@
             clearInterval(timerInterval);
             totalTimeSpent += timeElapsed;
             
-            // 獨立結算單關經驗值，並加入總和
             if (!isSolverUsed) {
                 stagesCleared++;
                 let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
@@ -724,7 +728,7 @@
         function handleGameOver(msg) {
             if (isRoundWon) return; 
             clearInterval(timerInterval);
-            totalTimeSpent += timeElapsed; // 將失敗局的耗時加入總時間
+            totalTimeSpent += timeElapsed; 
             forceSolve(false);
             let btnSolve = $('btn-solve'), levelInfo = $('level-info');
             btnSolve.innerText = "💀 失敗"; btnSolve.className = "small-action-btn failed";
@@ -750,7 +754,6 @@
         }
 
         function settleGame(isWin) {
-            // 如果最後一關是成功通關，也要算進經驗值
             if (isWin && !isSolverUsed && stagesCleared < 6) {
                 stagesCleared++;
                 let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
@@ -758,17 +761,14 @@
                 totalGainedPoints += reward.pts;
             }
 
-            // 若有放棄或失敗導致未達6關，計算失敗懲罰
             if (stagesCleared < 6) {
                 const failMultipliers = { 0:0.10, 1:0.20, 2:0.35, 3:0.50, 4:0.65, 5:0.80 };
                 totalGainedExp = Math.floor(totalGainedExp * failMultipliers[stagesCleared]);
-                totalGainedPoints = 0; // 失敗不給魔物點數
+                totalGainedPoints = 0; 
             }
             
-            // 將整局的耗時紀錄加進全局資料
             playerProfile.totalPlayTime += totalTimeSpent;
             
-            // 全破 6 關才算一次真正的成功
             if (stagesCleared === 6) {
                 playerProfile.totalWins += 1;
             }
@@ -814,14 +814,12 @@
             if (mult > 0) { mDisp.innerText = `${mult.toFixed(1)}x`; mDisp.style.color = mult === 3 ? '#f1c40f' : mult === 2 ? '#3498db' : '#ecf0f1'; } 
             else { mDisp.innerText = `MIN`; mDisp.style.color = '#e74c3c'; }
 
-            // 倒數最後 30 秒警告 (240秒死線)
             if (240 - timeElapsed <= 30) $('timer-disp').classList.add('urgent');
             else $('timer-disp').classList.remove('urgent');
         }
         
         function updateTimeBar() { 
             const bar = $('time-bar-fill');
-            // 更新進度條以 240 秒為基準
             let pct = Math.max(0, ((240 - timeElapsed) / 240) * 100);
             bar.style.width = `${pct}%`; bar.className = `time-bar-fill ${pct > 50 ? 'state-purple' : pct > 25 ? 'state-blue' : 'state-red'}`; 
         }

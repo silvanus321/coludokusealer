@@ -321,8 +321,8 @@
         function getSkillCost(lvl) { return lvl >= 99 ? 0 : Math.floor(Math.pow(lvl, 2) / 20) + 1; }
         
         function getMaxLives(lvl) {
-            if (lvl <= 8) return 1;
-            if (lvl <= 16) return 2;
+            if (lvl <= 20) return 1;
+            if (lvl <= 60) return 2;
             return 3;
         }
         
@@ -929,4 +929,5 @@
         window.onload = () => { updateStartScreen(); }
 </script>
 </body>
+
 </html>

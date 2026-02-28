@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>色獨封印師 (18.1 全局生命值版)</title>
+    <title>色獨封印師 (18.2 戰績統計與動態門檻版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
@@ -411,6 +411,7 @@
                         <div class="up-btn-top">${sym} Lv.${lvl}</div>
                         <div class="up-btn-bottom" style="display:flex; justify-content:center; gap:8px; width:100%;">
                             <span>🕒${conf.cd}s</span>
+                            <span style="color:#f39c12;">⬆️${cost}pt</span>
                         </div>
                     `;
                 }
@@ -928,7 +929,4 @@
         window.onload = () => { updateStartScreen(); }
 </script>
 </body>
-
 </html>
-
-

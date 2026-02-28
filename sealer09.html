@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>色獨封印師 (19.1 怪物聖典展示版)</title>
+    <style>
+        /* --- 1. 基礎設定 --- */
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
+        .header-box { position: relative; width: 100%; max-width: 400px; text-align: center; margin: 10px 0; }
+        h1 { margin: 0; letter-spacing: 2px; font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: inline-block; }
+
+        /* --- 2. HUD & 頂部 UI --- */
+        .hud { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 400px; background: rgba(255, 255, 255, 0.1); padding: 10px 10px; border-radius: 50px; margin-bottom: 10px; box-sizing: border-box; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); align-items: center; text-align: center; }
+        .hud-item { font-weight: bold; font-size: 0.8rem; }
+        .hud-val { color: #f1c40f; display: block; font-family: monospace; font-size: 1.1rem; margin-top: 2px; }
+        .hud-val.urgent { color: #e74c3c; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .top-controls-container { display: flex; width: 100%; max-width: 380px; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+        .small-action-btn { font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; font-weight: bold; border: none; color: white; cursor: pointer; transition: 0.2s; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .small-action-btn:active { transform: scale(0.95); }
+        .small-action-btn.btn-reset { background-color: #16a085; }
+        .small-action-btn.btn-reset:hover { background-color: #1abc9c; }
+        .small-action-btn.give-up { background-color: #7f8c8d; }
+        .small-action-btn.give-up:hover { background-color: #95a5a6; }
+        .small-action-btn.failed { background-color: #c0392b; cursor: not-allowed; }
+
+        .time-bar-container { flex-grow: 1; height: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1); }
+        .time-bar-fill { height: 100%; width: 100%; background-color: #3498db; transition: width 1s linear, background-color 0.3s ease; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .time-bar-fill.state-purple { background-color: #9b59b6; box-shadow: 0 0 15px #8e44ad, 0 0 5px #fff; animation: electric 0.2s infinite alternate; }
+        .time-bar-fill.state-blue { background-color: #3498db; box-shadow: 0 0 5px #2980b9; }
+        .time-bar-fill.state-red { background-color: #c0392b; box-shadow: 0 0 15px #e74c3c; animation: shakeBar 0.5s infinite; }
+        @keyframes electric { 0% { opacity: 1; box-shadow: 0 0 15px #8e44ad; } 100% { opacity: 0.8; box-shadow: 0 0 25px #d2b4de; } }
+        @keyframes shakeBar { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1px); opacity: 0.8; } 75% { transform: translateX(1px); opacity: 1; } }
+
+        .level-info { margin-top: 5px; font-size: 0.9rem; color: #f1c40f; min-height: 20px; font-weight: bold; text-align: center;}
+        .instruction-bar { font-size: 0.85rem; color: #bdc3c7; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; margin-bottom: 10px; white-space: nowrap; text-align: center; }
+
+        /* --- 3. 遊戲區 --- */
+        .game-container { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        .main-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background-color: #34495e; padding: 10px; border-radius: 12px; width: 100%; aspect-ratio: 1 / 1; box-sizing: border-box; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.2s; }
+        .main-grid.win-glow { box-shadow: 0 0 30px 10px rgba(241, 196, 15, 0.6); border: 2px solid #f1c40f; animation: pulse 1.5s infinite; }
+        
+        @keyframes errorShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+        .main-grid.error-shake { animation: errorShake 0.2s 2; border: 2px solid #e74c3c; box-shadow: 0 0 25px rgba(231, 76, 60, 0.8); }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 15px 5px rgba(241, 196, 15, 0.4); } 50% { box-shadow: 0 0 30px 15px rgba(241, 196, 15, 0.8); } }
+
+        .block { background-color: #ecf0f1; border: 2px solid transparent; position: relative; border-radius: 6px; overflow: hidden; display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .block.fixed { border-color: #c0392b; background-color: #fadbd8; }
+        .block.user-placed { border-color: #2980b9; }
+
+        /* 特效層 */
+        .void-erosion { position: absolute; width: 50%; height: 50%; background: radial-gradient(circle, #000 20%, #8e44ad 80%); box-shadow: 0 0 10px #8e44ad; border-radius: 50%; z-index: 15; pointer-events: none; animation: pulseVoid 1.5s infinite alternate; }
+        .void-erosion.corner-0 { top: 0; left: 0; border-top-left-radius: 6px; border-top-right-radius: 50%; border-bottom-left-radius: 50%; }
+        .void-erosion.corner-1 { top: 0; right: 0; border-top-right-radius: 6px; border-top-left-radius: 50%; border-bottom-right-radius: 50%; }
+        .void-erosion.corner-2 { bottom: 0; left: 0; border-bottom-left-radius: 6px; border-bottom-right-radius: 50%; border-top-left-radius: 50%; }
+        .void-erosion.corner-3 { bottom: 0; right: 0; border-bottom-right-radius: 6px; border-bottom-left-radius: 50%; border-top-right-radius: 50%; }
+        @keyframes pulseVoid { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 1; } }
+
+        .block.fixed.frozen { border-color: #74b9ff; background-color: transparent; box-shadow: 0 0 15px rgba(116, 185, 255, 0.5), inset 0 0 25px 8px rgba(116, 185, 255, 0.6), inset 0 0 8px 2px rgba(255, 255, 255, 0.8); }
+        .block.fixed.frozen .block-image { opacity: 1; }
+        .block.fixed.frozen::after { content: "❄️"; position: absolute; top: -2px; right: -2px; font-size: 1rem; filter: drop-shadow(0 0 2px #fff); pointer-events: none; z-index: 16; }
+
+        .block-image { width: 100%; height: 100%; object-fit: contain; }
+        .empty-slot { background-color: rgba(0,0,0,0.2); color: #7f8c8d; font-size: 2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.1); border-radius: 6px; position: relative; overflow: hidden; }
+        
+        .zone-edge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 11; }
+        .zone-center { position: absolute; top: 20%; left: 20%; width: 60%; height: 60%; z-index: 12; border-radius: 50%; }
+
+        .glow-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; border-radius: 12px; overflow: hidden; }
+        .glow-bar { position: absolute; box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; transition: opacity 0.3s; }
+        .glow-row { left: 1%; width: 98%; height: 31%; background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
+        .glow-col { top: 1%; height: 98%; width: 31%; background: linear-gradient(to right, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%); }
+        @keyframes pulseRed { 0%, 100% { box-shadow: inset 0 0 10px rgba(231,76,60,0.5); border-color: #c0392b; } 50% { box-shadow: inset 0 0 20px rgba(231,76,60,0.9); border-color: #e74c3c; } }
+
+        /* --- 4. 選單與按鈕 --- */
+        .action-btn { background-color: #27ae60; color: white; border: none; padding: 15px 40px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; margin-top: 25px; width: 80%; transition: all 0.2s; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .action-btn:active { transform: scale(0.95); }
+        
+        /* 遊戲內技能列 */
+        .sprite-action-bar { display: flex; gap: 4px; width: 100%; max-width: 400px; margin-top: 15px; justify-content: center; }
+        .sprite-btn { flex: 1; position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 1px; cursor: pointer; color: white; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.8); white-space: nowrap;}
+        .sprite-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(255, 255, 255, 0.25); z-index: 0; transition: height 1s linear, background-color 0.3s; pointer-events: none; }
+        .sprite-passive-border { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.8) 0%, transparent 10%); z-index: 0; pointer-events: none; filter: blur(4px); }
+        .sprite-btn.passive-type::before { content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px; background: rgba(0, 0, 0, 0.3); border-radius: 6px; z-index: 1; pointer-events: none;}
+        .sprite-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: bold; }
+        .sprite-btn.disabled { filter: grayscale(100%); opacity: 0.5; border-color: rgba(255,255,255,0.1); cursor: not-allowed; }
+        
+        .sprite-btn.theme-holy { background: linear-gradient(135deg, #f39c12, #2c3e50); }
+        .sprite-btn.theme-earth { background: linear-gradient(135deg, #d2691e, #2c3e50); }
+        .sprite-btn.theme-nature { background: linear-gradient(135deg, #2ecc71, #2c3e50); }
+        .sprite-btn.theme-shadow { background: linear-gradient(135deg, #8e44ad, #2c3e50); }
+        .sprite-btn.theme-ice { background: linear-gradient(135deg, #2980b9, #2c3e50); }
+        .sprite-btn.theme-fire { background: linear-gradient(135deg, #d35400, #2c3e50); }
+
+        .flash-intense { animation: flashSkill 0.3s 5 alternate; }
+        @keyframes flashSkill { 0% { filter: brightness(1); transform: scale(1); box-shadow: 0 0 5px white; } 100% { filter: brightness(2.5); transform: scale(1.1); box-shadow: 0 0 25px white; border-color: white;} }
+
+        /* 等級選擇鈕 */
+        .lvl-btn-container { width: 100%; max-width: 320px; margin: 15px auto; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .lvl-btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .lvl-btn { background: #34495e; border: 2px solid #bdc3c7; color: #ecf0f1; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.9rem;}
+        .lvl-btn small { font-size: 0.7rem; color: #95a5a6; display: block; margin-top: 2px; font-weight: normal;}
+        .lvl-btn.active { background: #f1c40f; border-color: #f39c12; color: #2c3e50; box-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        .lvl-btn.active small { color: #555; }
+        .lvl-btn.locked { opacity: 0.3; cursor: not-allowed; border-style: dashed; }
+        
+        .name-input { padding: 15px; border-radius: 10px; border: none; font-size: 1.2rem; width: 70%; text-align: center; margin-bottom: 20px; background: rgba(255,255,255,0.9); }
+
+        /* --- RPG 面板 --- */
+        .rpg-panel { background: rgba(0,0,0,0.4); border: 1px solid #f1c40f; border-radius: 10px; padding: 15px; width: 90%; max-width: 320px; margin: 10px auto; box-sizing: border-box; text-align: left; }
+        .rpg-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; color: #f1c40f; margin-bottom: 8px; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 5px; }
+        .rpg-exp-container { width: 100%; background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 5px;}
+        .rpg-exp-fill { height: 100%; background: #2ecc71; width: 0%; transition: width 0.5s; }
+        .rpg-stat { font-size: 0.85rem; color: #ecf0f1; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .rpg-global-stat { font-size: 0.8rem; color: #bdc3c7; display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 5px; margin-bottom: 10px; }
+        
+        /* 2x3 技能網格 */
+        .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.2); }
+        .skill-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .up-btn { width: 100%; background: #34495e; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 0; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: transform 0.1s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 0.85rem;}
+        .up-btn:active { transform: scale(0.95); }
+        .up-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .up-btn-top { display: flex; align-items: center; gap: 3px; margin-bottom: 2px; }
+        .up-btn-bottom { font-size: 0.7rem; font-family: monospace; color: #ecf0f1; }
+        .skill-desc { font-size: 0.65rem; color: #bdc3c7; text-align: center; line-height: 1.2; letter-spacing: 0.5px;}
+        
+        /* 各按鈕背景色 (微透) */
+        .up-btn.t-holy { background: linear-gradient(135deg, rgba(243, 156, 18, 0.4), rgba(44, 62, 80, 0.8)); border-color: #f39c12; }
+        .up-btn.t-earth { background: linear-gradient(135deg, rgba(210, 105, 30, 0.4), rgba(44, 62, 80, 0.8)); border-color: #d2691e; }
+        .up-btn.t-nature { background: linear-gradient(135deg, rgba(46, 204, 113, 0.4), rgba(44, 62, 80, 0.8)); border-color: #2ecc71; }
+        .up-btn.t-shadow { background: linear-gradient(135deg, rgba(142, 68, 173, 0.4), rgba(44, 62, 80, 0.8)); border-color: #8e44ad; }
+        .up-btn.t-ice { background: linear-gradient(135deg, rgba(52, 152, 219, 0.4), rgba(44, 62, 80, 0.8)); border-color: #3498db; }
+        .up-btn.t-fire { background: linear-gradient(135deg, rgba(231, 76, 60, 0.4), rgba(44, 62, 80, 0.8)); border-color: #e74c3c; }
+
+        /* --- 5. 彈窗與結算 --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); overflow-y: auto; }
+        .modal-content { background: white; color: #333; padding: 25px; border-radius: 15px; width: 95%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
+        .picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .picker-item { border: 1px solid #ddd; border-radius: 8px; padding: 5px; cursor: pointer; }
+        .picker-item img { width: 100%; }
+        
+        /* 怪物聖典樣式 */
+        .beast-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .beast-item { background: rgba(0,0,0,0.3); border: 2px solid #bdc3c7; border-radius: 8px; overflow: hidden; aspect-ratio: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+        .beast-item img { width: 100%; height: 100%; object-fit: cover; }
+        .beast-item.locked img { filter: brightness(0) opacity(0.3); }
+        .beast-item.locked::after { content: '🔒'; position: absolute; font-size: 2rem; }
+
+        .level-boards-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; width: 100%;}
+        
+        #start-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: #2c3e50; z-index: 100; display: flex; flex-direction: column; align-items: center; overflow-y:auto; padding: 20px 0;}
+        .intro-box { text-align: center; padding: 20px; width: 100%; box-sizing: border-box; margin: auto;}
+        .intro-title { font-size: 2rem; color: #f1c40f; margin-bottom: 5px; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="intro-box">
+            <div class="intro-title">🔮色獨封印師🔮</div>
+            
+            <div class="rpg-panel">
+                <div class="rpg-header">
+                    <span>封印師：<span id="ui-prof-name">未命名</span></span>
+                    <span>Lv.<span id="ui-prof-lvl">1</span> <small style="color:#e74c3c; font-size: 0.85rem;">(❤️x<span id="ui-prof-max-lives">1</span>)</small></span>
+                </div>
+                <div class="rpg-exp-container"><div id="ui-prof-exp-bar" class="rpg-exp-fill"></div></div>
+                <div class="rpg-stat">
+                    <span>EXP: <span id="ui-prof-exp-text">0/100</span></span>
+                    <span style="color:#e74c3c; font-weight:bold;">能力點數: <span id="ui-prof-pts">0</span></span>
+                </div>
+                <div class="rpg-global-stat">
+                    <span>通關勝率: <span id="ui-prof-wins" style="color:#3498db; font-weight:bold; font-size:0.9rem;">0% (0/0)</span></span>
+                    <span>總時長: <span id="ui-prof-time" style="color:#f39c12; font-weight:bold; font-family: monospace; font-size:0.9rem;">00:00:00</span></span>
+                </div>
+                
+                <div onclick="openBeastModal()" style="text-align: center; margin-bottom: 10px; font-size: 0.85rem; color: #e056fd; font-weight: bold; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; cursor: pointer; border: 1px solid #9b59b6; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    📖 點擊查看怪物聖典 (<span id="ui-prof-beasts" style="font-size: 1rem;">0/6</span>)
+                </div>
+
+                <div class="skills-grid">
+                    <div class="skill-cell">
+                        <button class="up-btn t-holy" id="up-holy" onclick="upgradeSkill('holy')"></button>
+                        <div class="skill-desc">指示1個方塊</div>
+                    </div>
+                    <div class="skill-cell">
+                        <button class="up-btn t-earth" id="up-earth" onclick="upgradeSkill('earth')"></button>
+                        <div class="skill-desc">消除1個空格</div>
+                    </div>
+                    <div class="skill-cell">
+                        <button class="up-btn t-nature" id="up-nature" onclick="upgradeSkill('nature')"></button>
+                        <div class="skill-desc">增加1點生命</div>
+                    </div>
+                    <div class="skill-cell">
+                        <button class="up-btn t-ice" id="up-ice" onclick="upgradeSkill('ice')"></button>
+                        <div class="skill-desc">冰凍1個方向</div>
+                    </div>
+                    <div class="skill-cell">
+                        <button class="up-btn t-fire" id="up-fire" onclick="upgradeSkill('fire')"></button>
+                        <div class="skill-desc">移除1個錯誤</div>
+                    </div>
+                    <div class="skill-cell">
+                        <button class="up-btn t-shadow" id="up-shadow" onclick="upgradeSkill('shadow')"></button>
+                        <div class="skill-desc">隱藏1顆寶石</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lvl-btn-container">
+                <div class="lvl-btn-group" id="level-buttons-container"></div>
+            </div>
+            
+            <input type="text" id="player-name" class="name-input" placeholder="請輸入封印師名號" maxlength="10">
+            <button class="action-btn" onclick="startGame()" style="margin-top: 0; padding: 12px 40px;">開始挑戰</button>
+        </div>
+    </div>
+
+    <div class="header-box"><h1 id="game-title">Round 1</h1></div>
+    
+    <div class="hud">
+        <div class="hud-item">關卡 <span id="round-disp" class="hud-val">1/6</span></div>
+        <div class="hud-item">時間 <span id="timer-disp" class="hud-val">00:00</span></div>
+        <div class="hud-item">生命 <span id="lives-disp" class="hud-val" style="color:#e74c3c;">❤️❤️❤️</span></div>
+        <div class="hud-item">倍率 <span id="mult-disp" class="hud-val" style="color:#f1c40f;">2.0x</span></div>
+    </div>
+
+    <div id="top-ui-controls" class="top-controls-container">
+        <button id="btn-reset" class="small-action-btn btn-reset" onclick="resetLevel()">🔄 重置</button>
+        <div class="time-bar-container"><div id="time-bar-fill" class="time-bar-fill state-purple"></div></div>
+        <button id="btn-solve" class="small-action-btn give-up" onclick="handleGameOver('放棄挑戰，試煉中斷！')">🏳️ 放棄</button>
+    </div>
+
+    <div class="game-container">
+        <div class="level-info" id="level-info"></div>
+        <div class="instruction-bar">👆輕點翻面 | 🔄邊緣旋轉 | 🗑️長按移除扣血</div>
+        <div id="grid-container" class="main-grid"></div>
+        <button id="btn-next" class="action-btn" style="display:none;" onclick="nextLevel()">下一關 ➡️</button>
+        <button id="btn-settle" class="action-btn" style="display:none; background-color:#e74c3c;" onclick="settleGame(false)">結算退出</button>
+        
+        <div id="sprite-action-bar" class="sprite-action-bar"></div>
+    </div>
+
+    <div id="picker-modal" class="modal-overlay" onclick="closePicker()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="picker-title">選擇魔石 (B面)</h3>
+            <div id="picker-grid" class="picker-grid"></div>
+            <div style="margin-top:15px; display:flex; justify-content:center; gap:10px;">
+                <button onclick="togglePickerFace()" style="padding:10px 20px; background:#9b59b6; color:white; border:none; border-radius:20px; font-weight:bold;">🔄 翻面</button>
+                <button onclick="closePicker()" style="padding:10px 20px; background:#ddd; border:none; border-radius:20px;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="beast-modal" class="modal-overlay" onclick="closeBeastModal()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="background: #2c3e50; color: white; border: 2px solid #9b59b6;">
+            <h3 style="color: #e056fd; margin-top: 0; letter-spacing: 2px;">📖 怪物聖典</h3>
+            <div style="font-size: 0.8rem; color: #bdc3c7;">挑戰 Level 1 來收錄所有的魔物吧！</div>
+            <div id="beast-grid" class="beast-grid"></div>
+            <button class="action-btn" style="padding:10px 30px; margin-top: 20px; background-color: #7f8c8d;" onclick="closeBeastModal()">關閉圖鑑</button>
+        </div>
+    </div>
+
+    <div id="end-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="background:#f4f6f7; padding:15px 10px; border-radius:10px; margin-bottom:15px;">
+                <div style="font-size:1.3rem; color:#2c3e50; font-weight:bold; margin-bottom: 5px;" id="end-status-title">試煉結果</div>
+                <div style="font-size:0.9rem; color:#8e44ad; font-weight:bold; margin-bottom: 10px;" id="end-title-desc"></div>
+                
+                <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap; margin-bottom: 10px;">
+                    <div>結算得分 <span id="end-score" style="color:#27ae60; font-weight:bold; font-size:1.1rem;">0</span></div>
+                    <div>通關數 <span id="end-stages" style="color:#3498db; font-weight:bold; font-size:1.1rem;">0/6</span></div>
+                </div>
+
+                <div style="border-top: 1px dashed #bdc3c7; padding-top: 10px; text-align: left;">
+                    <div style="font-weight:bold; color:#2c3e50;">🎁 試煉獎勵：</div>
+                    <div style="color:#2ecc71;">獲得經驗值：<span id="end-exp-gain">+0 EXP</span></div>
+                    <div id="end-level-up-msg" style="color:#f39c12; font-weight:bold; display:none;">🎉 封印師升級了！解鎖新難度！</div>
+                    <div style="color:#e74c3c;">獲得能力點數：<span id="end-pts-gain">+0 點</span> <small>(需通關6局)</small></div>
+                    <div id="end-beast-msg" style="color:#9b59b6; font-weight:bold; margin-top:5px; display:none;">📖 成功收錄魔物！</div>
+                </div>
+            </div>
+            <div class="level-boards-container" id="level-boards"></div>
+            <button class="action-btn" style="margin-top:20px; padding:10px 30px;" onclick="location.reload()">返回大廳</button>
+        </div>
+    </div>
+
+<script>
+        const $ = id => document.getElementById(id);
+
+        /* ==============================================================
+           1. RPG 系統：資料儲存與公式 (v19.1 怪物聖典展示版)
+        ============================================================== */
+        let playerProfile = JSON.parse(localStorage.getItem('coludoku_rpg_v19')) || {
+            name: "", lvl: 1, exp: 0, points: 0,
+            totalWins: 0, totalPlays: 0, totalPlayTime: 0, 
+            skills: { holy: 1, earth: 1, nature: 1, shadow: 1, ice: 1, fire: 1 },
+            beasts: []
+        };
+        if(playerProfile.totalWins === undefined) playerProfile.totalWins = 0;
+        if(playerProfile.totalPlays === undefined) playerProfile.totalPlays = playerProfile.totalWins; 
+        if(playerProfile.totalPlayTime === undefined) playerProfile.totalPlayTime = 0;
+        if(playerProfile.beasts === undefined) playerProfile.beasts = [];
+
+        function getExpForNextLevel(lvl) { 
+            return lvl >= 99 ? 0 : Math.floor(1000 + 99000 * Math.pow((lvl - 1) / 97, 2)); 
+        }
+
+        const TRIAL_UNLOCK_REQS = [
+             1, 4, 6, 8, 10, 13, 16, 20, 24, 29, 34, 40, 46, 53, 60, 68, 76, 84, 92, 99
+        ];
+
+        function getUnlockedMaxTrial(lvl) { 
+            let max = 1;
+            for(let i = 0; i < 20; i++) {
+                if(lvl >= TRIAL_UNLOCK_REQS[i]) max = i + 1;
+            }
+            return max;
+        }
+
+        function getSkillCost(lvl) { return lvl >= 99 ? 0 : lvl; }
+        
+        function getMaxLives(lvl) {
+            if (lvl <= 20) return 1;
+            if (lvl <= 60) return 2;
+            return 3;
+        }
+        
+        function getSkillConfig(id, lvl) {
+            const CD_MAP = { holy: {min:40,max:240}, earth: {min:60,max:300}, fire: {min:20,max:120}, ice: {min:30,max:180}, shadow: {min:10,max:60} };
+            if (id === 'nature') return { cd: Math.round(180 * Math.exp(-0.02 * (lvl - 1))) }; 
+            return { cd: Math.round(CD_MAP[id].min + (CD_MAP[id].max - CD_MAP[id].min) * Math.exp(-0.05 * (lvl - 1))) };
+        }
+        
+        function getSpriteSymbol(key) { return {holy:'✨',earth:'🟫',nature:'🌱',shadow:'🟣',ice:'❄️',fire:'🔥'}[key]; }
+
+        function calculateSingleRoundExp(trialLevel, timeSpentSeconds) {
+            const baseExp = trialLevel * 50;
+            let finalExp = 0;
+
+            if (timeSpentSeconds <= 30) {
+                finalExp = Math.floor(baseExp * 2.0);
+            } else if (timeSpentSeconds <= 60) {
+                finalExp = Math.floor(baseExp * 1.5);
+            } else if (timeSpentSeconds <= 120) {
+                finalExp = Math.floor(baseExp * 1.0);
+            } else {
+                finalExp = 10; 
+            }
+            return { exp: finalExp };
+        }
+
+        function formatTotalTime(sec) {
+            let h = Math.floor(sec / 3600);
+            let m = Math.floor((sec % 3600) / 60);
+            let s = sec % 60;
+            if (h > 0) return `${h}時 ${m.toString().padStart(2,'0')}分 ${s.toString().padStart(2,'0')}秒`;
+            return `${m.toString().padStart(2,'0')}分 ${s.toString().padStart(2,'0')}秒`;
+        }
+
+        function updateStartScreen() {
+            if(playerProfile.name) $('player-name').value = playerProfile.name;
+            $('ui-prof-name').innerText = playerProfile.name || "未命名";
+            $('ui-prof-lvl').innerText = playerProfile.lvl;
+            $('ui-prof-max-lives').innerText = getMaxLives(playerProfile.lvl); 
+            let nextExp = getExpForNextLevel(playerProfile.lvl);
+            $('ui-prof-exp-text').innerText = playerProfile.lvl >= 99 ? "MAX" : `${playerProfile.exp} / ${nextExp}`;
+            $('ui-prof-exp-bar').style.width = playerProfile.lvl >= 99 ? '100%' : `${(playerProfile.exp / nextExp) * 100}%`;
+            $('ui-prof-pts').innerText = playerProfile.points;
+            
+            let winRate = playerProfile.totalPlays > 0 ? ((playerProfile.totalWins / playerProfile.totalPlays) * 100).toFixed(1) : 0;
+            $('ui-prof-wins').innerText = `${winRate}% (${playerProfile.totalWins}/${playerProfile.totalPlays})`;
+            $('ui-prof-time').innerText = formatTotalTime(playerProfile.totalPlayTime);
+            $('ui-prof-beasts').innerText = `${playerProfile.beasts.length}/6`;
+
+            const btnContainer = $('level-buttons-container');
+            btnContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 20; i++) {
+                let btn = document.createElement('button');
+                let reqLvl = TRIAL_UNLOCK_REQS[i - 1]; 
+                let isLocked = playerProfile.lvl < reqLvl; 
+                
+                btn.className = `lvl-btn ${i === selectedLevel ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+                btn.onclick = function() { 
+                    if(isLocked) return alert(`需達到封印師等級 ${reqLvl} 才能解鎖此難度！`);
+                    selectLevel(i, this); 
+                };
+                let shapeSize = BASE_SHAPES[i][0].length;
+                btn.innerHTML = `LEVEL ${i}<br><small>${ isLocked ? `🔒 需 Lv.${reqLvl}` : shapeSize + ' 格變異'}</small>`;
+                btnContainer.appendChild(btn);
+            }
+
+            ['holy', 'earth', 'nature', 'ice', 'fire', 'shadow'].forEach(id => {
+                let lvl = playerProfile.skills[id];
+                let conf = getSkillConfig(id, lvl);
+                let sym = getSpriteSymbol(id);
+                let cost = getSkillCost(lvl);
+                let btn = $(`up-${id}`);
+                
+                if (lvl >= 99) { 
+                    btn.disabled = true; 
+                    btn.innerHTML = `
+                        <div class="up-btn-top">${sym} MAX</div>
+                        <div class="up-btn-bottom" style="display:flex; gap:8px;">
+                            <span>🕒${conf.cd}s</span>
+                        </div>
+                    `;
+                } else { 
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <div class="up-btn-top">${sym} Lv.${lvl}</div>
+                        <div class="up-btn-bottom" style="display:flex; justify-content:center; gap:8px; width:100%;">
+                            <span>🕒${conf.cd}s</span>
+                            <span style="color:#f39c12;">⬆️${cost}pt</span>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function upgradeSkill(id) {
+            let cost = getSkillCost(playerProfile.skills[id]);
+            if (playerProfile.skills[id] >= playerProfile.lvl) return alert("能力等級不能超過你當前的封印師等級！請先去提升等級。");
+            if (playerProfile.points < cost) return alert(`能力點數不足！升級需要 ${cost} 點。去打敗更高難度的關卡吧！`);
+            playerProfile.points -= cost;
+            playerProfile.skills[id]++;
+            saveProfile();
+            updateStartScreen();
+            playSound('bonus');
+        }
+
+        // --- 怪物聖典視窗控制 ---
+        function openBeastModal() {
+            playSound('action');
+            const grid = $('beast-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 6; i++) {
+                const div = document.createElement('div');
+                const isUnlocked = playerProfile.beasts.includes(i);
+                div.className = `beast-item ${isUnlocked ? '' : 'locked'}`;
+                // 使用 onError 確保萬一圖片沒放好不會跑版
+                div.innerHTML = `<img src="images/beast-0${i}.png" alt="Beast ${i}" onerror="this.src=''; this.alt='❓'">`;
+                grid.appendChild(div);
+            }
+            $('beast-modal').style.display = 'flex';
+        }
+
+        function closeBeastModal() {
+            $('beast-modal').style.display = 'none';
+        }
+
+        function saveProfile() { localStorage.setItem('coludoku_rpg_v19', JSON.stringify(playerProfile)); }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(), gainNode = audioCtx.createGain(), now = audioCtx.currentTime;
+            osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+            if (type === 'action') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
+            else if (type === 'win') { playNote(523.25, now, 0.1); playNote(659.25, now + 0.1, 0.1); playNote(783.99, now + 0.2, 0.4); }
+            else if (type === 'bonus') { playNote(880, now, 0.1); playNote(1760, now + 0.1, 0.2); }
+            else if (type === 'error') { playNote(150, now, 0.2); playNote(100, now + 0.2, 0.3); } 
+            else if (type === 'ice') { osc.type='sine'; osc.frequency.setValueAtTime(1200,now); osc.frequency.exponentialRampToValueAtTime(2000,now+0.1); gainNode.gain.setValueAtTime(0.2,now); gainNode.gain.exponentialRampToValueAtTime(0.01,now+0.2); osc.start(now); osc.stop(now+0.2); }
+        }
+        function playNote(freq, time, dur) { const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'square'; osc.frequency.value = freq; gain.gain.setValueAtTime(0.1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + dur); osc.start(time); osc.stop(time + dur); }
+
+        const BLOCKS={1:{B:[[1,2],[3,4]],W:[[5,6],[3,4]]},2:{B:[[4,6],[3,5]],W:[[2,6],[1,5]]},3:{B:[[2,1],[6,5]],W:[[3,4],[1,2]]},4:{B:[[5,2],[6,3]],W:[[4,1],[5,2]]},5:{B:[[4,5],[1,2]],W:[[3,4],[6,1]]},6:{B:[[1,4],[6,3]],W:[[6,3],[5,2]]},7:{B:[[1,6],[5,4]],W:[[2,3],[6,1]]},8:{B:[[2,6],[3,1]],W:[[2,4],[3,5]]},9:{B:[[2,3],[4,5]],W:[[6,1],[4,5]]}};
+        const BASE_SHAPES = { 1:[[1,2],[4,5],[8,9]], 2:[[1,4,9],[1,2,6],[1,5,8]], 3:[[1,2,4],[1,4,6],[1,7,9]], 4:[[1,4,7],[2,5,8],[3,6,9]], 5:[[2,3,4,9],[2,3,4,8],[1,3,5,7]], 6:[[1,2,5,6],[1,2,5,7],[1,2,8,9]], 7:[[1,2,4,5],[1,3,7,9],[1,2,7,8]], 8:[[1,2,5,8],[3,4,6,9],[2,4,5,8]], 9:[[2,3,4,7,9],[2,3,4,6,8],[2,3,4,5,7]], 10:[[1,3,5,7,9],[1,2,4,5,9],[1,2,6,7,8]], 11:[[1,2,5,8,9],[2,4,7,8,9],[1,5,7,8,9]], 12:[[2,4,5,6,8],[1,4,7,8,9],[3,4,5,6,9]], 13:[[2,3,4,5,7,9],[1,2,4,6,8,9],[1,2,5,6,7,9]], 14:[[2,4,6,7,8,9],[2,4,5,6,7,9],[1,3,5,7,8,9]], 15:[[1,2,3,4,5,7],[1,2,4,5,6,8],[1,2,3,4,7,9]], 16:[[1,2,3,4,6,7],[2,5,6,7,8,9],[1,2,5,7,8,9]], 17:[[1,2,3,4,5,6],[1,2,3,7,8,9],[4,5,6,7,8,9]], 18:[[1,2,4,5,6,8,9],[1,3,5,6,7,8,9],[1,2,3,4,5,8,9]], 19:[[1,2,3,5,7,8,9],[2,4,5,6,7,8,9],[1,3,4,6,7,8,9]], 20:[[1,2,3,4,5,6,7,8],[1,3,4,5,6,7,8,9],[1,2,3,4,6,7,8,9]] };
+        const TARGET_POOLS = [ [2,4,9], [2,6,7], [1,5,9], [3,4,8], [1,6,8], [3,5,7] ];
+
+        let selectedLevel = 1, currentRound = 1;
+        let totalTimeSpent = 0; 
+        let currentLayoutConfig = {}, userBoard = Array(9).fill(null);
+        let pickingSlot = -1, isRoundWon = false, isSolverUsed = false;
+        
+        let timerInterval, timeElapsed = 0, lastValidLineCount = 0;
+        let lives = 1, maxLives = 1; 
+        
+        let totalGainedExp = 0;
+        let totalGainedPoints = 0;
+        let stagesCleared = 0;
+        
+        let longPressTimer, pickerFace = 'B'; 
+        let absoluteSolution = null, activeHint = null;   
+        let currentBeastId = 0; 
+
+        let runSprites = {};
+
+        function selectLevel(lvl, btn) {
+            selectedLevel = lvl;
+            document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active'); playSound('action');
+        }
+
+        function initRunSprites() {
+            runSprites = {};
+            ['holy', 'earth', 'nature'].forEach(key => {
+                let conf = getSkillConfig(key, playerProfile.skills[key]);
+                runSprites[key] = { type: 'active', sym: getSpriteSymbol(key), cd: conf.cd, timer: conf.cd, charges: 1, maxCharges: 2, power: 0, theme: `theme-${key}` };
+            });
+            ['shadow', 'ice', 'fire'].forEach(key => {
+                let conf = getSkillConfig(key, playerProfile.skills[key]);
+                runSprites[key] = { type: 'passive', sym: getSpriteSymbol(key), cd: conf.cd, timer: conf.cd, active: true, paused: false, theme: `theme-${key}` };
+            });
+        }
+
+        function startGame() {
+            const nameInput = $('player-name').value.trim();
+            if (!nameInput) return alert("請輸入封印師名號！");
+            
+            playerProfile.name = nameInput;
+            saveProfile();
+
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            $('start-screen').style.display = 'none';
+            currentRound = 1; 
+            totalGainedExp = 0;
+            totalGainedPoints = 0;
+            stagesCleared = 0;
+            totalTimeSpent = 0; 
+
+            if (selectedLevel === 1) {
+                currentBeastId = Math.floor(Math.random() * 6) + 1;
+            } else {
+                currentBeastId = 0;
+            }
+            
+            maxLives = getMaxLives(playerProfile.lvl);
+            lives = maxLives; 
+            
+            initRunSprites();
+            loadRound(currentRound);
+        }
+
+        function rotatePos(pos) { return {1:3, 2:6, 3:9, 4:2, 5:5, 6:8, 7:1, 8:4, 9:7}[pos]; }
+        function mirrorPos(pos) { return {1:3, 2:2, 3:1, 4:6, 5:5, 6:4, 7:9, 8:8, 9:7}[pos]; }
+        function transformShape(shape, rots, doMir) { let res = [...shape]; if(doMir) res=res.map(mirrorPos); for(let i=0;i<rots;i++) res=res.map(rotatePos); return res.sort((a,b)=>a-b); }
+
+        let unneededBlocks = [], permanentlyRemovedBlocks = new Set(), solutionFixedRotations = new Map(), frozenBlocks = new Set(), shadowTargetIndices = [], shadowEaten = {}, shadowTurn = 0; 
+
+        function solveSmartInit(idx, board, usedIDs, userBoardSpecs) { if (idx >= 9) return true; if (board[idx] !== null) { if (!isValid(board)) return false; return solveSmartInit(idx + 1, board, usedIDs, userBoardSpecs); } const config = currentLayoutConfig[idx]; if (config.type === 'EMPTY') return solveSmartInit(idx + 1, board, usedIDs, userBoardSpecs); if (config.type === 'FIXED') { const { id, face } = config; for (let rot = 0; rot < 4; rot++) { board[idx] = { id, face, rot, isFixed: true }; if (isValid(board) && solveSmartInit(idx + 1, board, usedIDs, userBoardSpecs)) return true; } board[idx] = null; return false; } if (config.type === 'SOLVE') { for (let id = 1; id <= 9; id++) { if (!usedIDs.has(id)) { usedIDs.add(id); for (let face of ['B', 'W']) { for (let rot = 0; rot < 4; rot++) { board[idx] = { id, face, rot, isFixed: false }; if (isValid(board) && solveSmartInit(idx + 1, board, usedIDs, userBoardSpecs)) return true; } } board[idx] = null; usedIDs.delete(id); } } return false; } return false; }
+
+        function loadRound(round) {
+            isRoundWon = false; isSolverUsed = false; lastValidLineCount = 0; activeHint = null; 
+            
+            $('game-title').innerText = `Round ${round}`;
+            $('btn-next').style.display = 'none'; $('btn-settle').style.display = 'none';
+            $('top-ui-controls').style.display = 'flex'; $('btn-solve').style.display = 'block'; $('btn-solve').disabled = false; $('btn-solve').innerText = "🏳️ 放棄"; $('btn-solve').className = "small-action-btn give-up";
+            $('grid-container').classList.remove('win-glow'); $('timer-disp').classList.remove('urgent');
+
+            const grid = $('grid-container');
+            if (currentBeastId > 0) {
+                grid.style.backgroundImage = `linear-gradient(rgba(52, 73, 94, 0.85), rgba(52, 73, 94, 0.85)), url('images/beast-0${currentBeastId}.png')`;
+                grid.style.backgroundSize = 'cover';
+                grid.style.backgroundPosition = 'center';
+            } else {
+                grid.style.backgroundImage = 'none';
+            }
+
+            if (Object.keys(runSprites).length > 0) {
+                ['shadow', 'ice', 'fire'].forEach(k => {
+                    if(runSprites[k]) runSprites[k].timer = runSprites[k].cd;
+                });
+            }
+
+            let solvable = false, attempts = 0, finalTempBoard = null;
+            while (!solvable && attempts < 1000) {
+                attempts++;
+                let baseShapes = BASE_SHAPES[selectedLevel]; let baseShape = baseShapes[Math.floor(Math.random() * baseShapes.length)];
+                let rot = Math.floor(Math.random() * 4), mir = Math.random() > 0.5; let activeArr = transformShape(baseShape, rot, mir);
+                let shapeSize = activeArr.length, maxHints = Math.max(0, shapeSize - 1); if (maxHints > 3) maxHints = 3;
+                let shuffledPools = TARGET_POOLS.slice().sort(() => Math.random() - 0.5), chosenTargets = [];
+                for(let pool of shuffledPools) { let intersect = pool.filter(p => activeArr.includes(p)); if (intersect.length > 0 && intersect.length <= maxHints) { chosenTargets = intersect.slice(0, maxHints); break; } }
+                if (chosenTargets.length === 0) { for(let pool of shuffledPools) { let intersect = pool.filter(p => activeArr.includes(p)); if (intersect.length > 0) { chosenTargets = intersect.slice(0, maxHints); break; } } }
+                if (chosenTargets.length === 0) continue; chosenTargets = chosenTargets.sort(() => Math.random() - 0.5);
+                let availIDs = [1,2,3,4,5,6,7,8,9].sort(()=>Math.random()-0.5), targetBlocks = [];
+                for(let i = 0; i < chosenTargets.length; i++) targetBlocks.push({ id: availIDs[i], f: Math.random()>0.5?'B':'W' });
+                currentLayoutConfig = {}; for(let i=0; i<9; i++) currentLayoutConfig[i] = { type: 'EMPTY' };
+                activeArr.forEach(pos => { currentLayoutConfig[pos-1] = { type: 'SOLVE' }; });
+                chosenTargets.forEach((pos, idx) => { currentLayoutConfig[pos-1] = { type: 'FIXED', id: targetBlocks[idx].id, face: targetBlocks[idx].f }; });
+                let tempBoard = Array(9).fill(null), tempUsed = new Set();
+                for(let i=0; i<9; i++) { if (currentLayoutConfig[i].type === 'FIXED') { tempBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true }; tempUsed.add(currentLayoutConfig[i].id); } }
+                if (solveSmartInit(0, tempBoard, tempUsed, [])) { solvable = true; finalTempBoard = tempBoard; }
+            }
+
+            absoluteSolution = finalTempBoard.map(b => b ? {...b} : null);
+            initializeRoundState();
+
+            $('level-info').innerText = `等級 ${selectedLevel} (移除方塊才會扣血)`; 
+            $('level-info').style.color = "#f1c40f"; 
+            
+            updateHUD();
+            startTimer(); 
+            renderGameGrid(); renderActionBar();
+        }
+
+        function initializeRoundState() {
+            let neededIDs = new Set(); solutionFixedRotations.clear(); frozenBlocks.clear(); shadowTargetIndices = []; shadowEaten = {}; shadowTurn = 0; permanentlyRemovedBlocks.clear(); 
+            for(let i=0; i<9; i++) { if(absoluteSolution[i]) { if (absoluteSolution[i].isFixed) { currentLayoutConfig[i].type = 'FIXED'; } else { currentLayoutConfig[i].type = 'SOLVE'; } } else { currentLayoutConfig[i].type = 'EMPTY'; } }
+            for(let i=0; i<9; i++) { if (absoluteSolution[i]) { neededIDs.add(absoluteSolution[i].id); if (currentLayoutConfig[i].type === 'FIXED') { solutionFixedRotations.set(i, absoluteSolution[i].rot); shadowTargetIndices.push(i); } } }
+            unneededBlocks = [1,2,3,4,5,6,7,8,9].filter(id => !neededIDs.has(id)); unneededBlocks.sort(() => Math.random() - 0.5); 
+            
+            userBoard = Array(9).fill(null);
+            for(let i=0; i<9; i++) { if (currentLayoutConfig[i].type === 'FIXED') { userBoard[i] = { id: currentLayoutConfig[i].id, face: currentLayoutConfig[i].face, rot: 0, isFixed: true }; } }
+            activeHint = null;
+        }
+
+        function renderActionBar() {
+            let bar = $('sprite-action-bar'); bar.innerHTML = ''; bar.style.display = 'flex';
+            Object.keys(runSprites).forEach(k => {
+                let s = runSprites[k];
+                let btn = document.createElement('div'); btn.id = `btn-sp-${k}`;
+                
+                if (s.type === 'active') {
+                    btn.className = `sprite-btn ${s.theme} ${s.paused || s.charges<=0 ? 'disabled' : ''}`;
+                    btn.innerHTML = `
+                        <div class="sprite-fill" id="fill-${k}"></div>
+                        <div class="sprite-content">
+                            <span>${s.sym} <small style="font-size:0.75rem">(${s.charges}/${s.maxCharges})</small></span>
+                        </div>
+                    `;
+                    btn.onclick = () => window[`activate${k.charAt(0).toUpperCase() + k.slice(1)}`]?.();
+                } else {
+                    btn.className = `sprite-btn passive-type ${s.theme} ${s.paused ? 'disabled' : ''}`;
+                    btn.innerHTML = `
+                        <div class="sprite-passive-border" id="border-${k}"></div>
+                        <div class="sprite-content">
+                            <span>${s.sym} ${s.timer}s</span>
+                        </div>
+                    `;
+                    btn.onclick = () => { if(isRoundWon||isSolverUsed)return; s.paused=!s.paused; updateSpriteButton(k); };
+                }
+                bar.appendChild(btn);
+            });
+            if (bar.innerHTML === '') bar.style.display = 'none';
+            Object.keys(runSprites).forEach(k => updateSpriteButton(k));
+        }
+
+        function updateSpriteButton(k) {
+            let btn = $(`btn-sp-${k}`), s = runSprites[k];
+            if(btn && s) {
+                let fill = btn.querySelector(`#fill-${k}`);
+                let border = btn.querySelector(`#border-${k}`);
+                let contentSpan = btn.querySelector('.sprite-content span');
+                let pct = 0;
+
+                if (s.type === 'active') {
+                    let timeText = s.charges >= s.maxCharges ? "MAX" : `(${s.charges}/${s.maxCharges})`;
+                    contentSpan.innerHTML = `${s.sym} <small style="font-size:0.75rem">${timeText}</small>`;
+                    if(s.charges <= 0) btn.classList.add('disabled'); else btn.classList.remove('disabled');
+                    
+                    if (s.charges >= s.maxCharges) pct = 100;
+                    else pct = ((s.cd - s.timer) / s.cd) * 100;
+                    
+                    if(fill) {
+                        fill.style.height = `${pct}%`;
+                        if (pct >= 100) fill.style.background = 'rgba(241, 196, 15, 0.4)';
+                        else fill.style.background = 'rgba(255, 255, 255, 0.25)';
+                    }
+                } else {
+                    contentSpan.innerText = `${s.sym} ${s.timer}s`;
+                    if(s.paused) btn.classList.add('disabled'); else btn.classList.remove('disabled');
+                    
+                    pct = ((s.cd - s.timer) / s.cd);
+                    let degree = Math.floor(pct * 360);
+                    if(border) {
+                        border.style.background = `conic-gradient(from 0deg, rgba(255,255,255,0.7) 0deg, rgba(255,255,255,0.2) ${degree}deg, transparent ${degree}deg)`;
+                    }
+                }
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeElapsed = 0; 
+            updateTimerDisplay(); updateTimeBar(); 
+            timerInterval = setInterval(() => {
+                timeElapsed++; updateTimerDisplay(); updateTimeBar();
+                
+                if (timeElapsed >= 240) {
+                    handleGameOver("超過 4 分鐘未解開，試煉強制結束！");
+                    return;
+                }
+                
+                Object.keys(runSprites).forEach(k => {
+                    let s = runSprites[k];
+                    if (!s.paused && !isRoundWon && !isSolverUsed) {
+                        if (s.type === 'active' && s.charges < s.maxCharges) {
+                            s.timer--;
+                            if (s.timer <= 0) { 
+                                s.charges++; 
+                                s.timer = s.charges < s.maxCharges ? s.cd : 0; 
+                                playSound('bonus'); 
+                            }
+                        } else if (s.type === 'passive') {
+                            s.timer--;
+                            if (s.timer <= 0) { executeSpriteLogic(k); s.timer = s.cd; }
+                        }
+                        updateSpriteButton(k); 
+                    }
+                });
+            }, 1000);
+        }
+
+        function activateHoly() {
+            let s = runSprites.holy; if (!s || s.charges <= 0 || isRoundWon || activeHint) return;
+            
+            let wrongIndex = -1;
+            for(let i=0; i<9; i++) {
+                if(currentLayoutConfig[i].type === 'SOLVE') {
+                    if (!userBoard[i] || userBoard[i].id !== absoluteSolution[i].id) {
+                        wrongIndex = i; break;
+                    }
+                }
+            }
+            if (wrongIndex === -1) return alert("✨ 目前盤面上的魔石都是正確的，試著轉轉看吧！");
+            
+            if (s.charges === s.maxCharges) s.timer = s.cd; 
+            s.charges--; updateSpriteButton('holy');
+            
+            activeHint = { index: wrongIndex, id: absoluteSolution[wrongIndex].id, face: absoluteSolution[wrongIndex].face, rot: 0 };
+            playSound('bonus'); $('level-info').innerText = `✨ 聖光：神聖之光指引了正確的魔石！`; $('level-info').style.color = "#f1c40f";
+            $(`btn-sp-holy`).classList.add('flash-intense'); setTimeout(() => $(`btn-sp-holy`).classList.remove('flash-intense'), 1500);
+            renderGameGrid(); 
+        }
+
+        function activateEarth() {
+            let s = runSprites.earth; if (!s || s.charges <= 0 || isRoundWon) return;
+            let emptySolveSlots = Object.keys(currentLayoutConfig).filter(i => currentLayoutConfig[i].type === 'SOLVE' && userBoard[i] === null);
+            if (emptySolveSlots.length === 0) return alert("🟫 目前沒有可以消除的空格！");
+            
+            if (s.charges === s.maxCharges) s.timer = s.cd;
+            s.charges--; updateSpriteButton('earth');
+            
+            let targetIdx = emptySolveSlots[Math.floor(Math.random() * emptySolveSlots.length)];
+            currentLayoutConfig[targetIdx].type = 'EMPTY'; userBoard[targetIdx] = null; 
+            playSound('action'); $('level-info').innerText = `🟫 大地：板塊崩塌！消除 1 個空格！`; $('level-info').style.color = "#d2691e";
+            $(`btn-sp-earth`).classList.add('flash-intense'); setTimeout(() => $(`btn-sp-earth`).classList.remove('flash-intense'), 1500);
+            renderGameGrid(); 
+        }
+
+        function activateNature() {
+            let s = runSprites.nature; if (!s || s.charges <= 0 || isRoundWon || isSolverUsed) return;
+            
+            if (lives >= maxLives) return alert("🌱 你的生命值已經滿了，無需補血！");
+
+            if (s.charges === s.maxCharges) s.timer = s.cd;
+            s.charges--; updateSpriteButton('nature');
+            
+            lives++;
+            updateHUD();
+            playSound('win');
+            
+            $('level-info').innerText = `🌱 生靈：注入生命力！回復 1 點生命！`; $('level-info').style.color = "#2ecc71";
+            $(`btn-sp-nature`).classList.add('flash-intense'); setTimeout(() => $(`btn-sp-nature`).classList.remove('flash-intense'), 1500);
+        }
+
+        function executeSpriteLogic(key) {
+            let levelInfo = $('level-info'), btn = $(`btn-sp-${key}`);
+            if(btn) { btn.classList.add('flash-intense'); setTimeout(() => btn.classList.remove('flash-intense'), 1500); }
+
+            if (key === 'fire') {
+                if (unneededBlocks.length > 0) {
+                    let removedID = unneededBlocks.pop(); permanentlyRemovedBlocks.add(removedID);
+                    for (let i = 0; i < 9; i++) { if (userBoard[i] && userBoard[i].id === removedID && !userBoard[i].isFixed) { userBoard[i] = null; if (activeHint && activeHint.index === i) activeHint = null; } }
+                    renderGameGrid(); playSound('action'); 
+                    levelInfo.innerText = `🔥 火焰：燒毀 1 個干擾！`; levelInfo.style.color = "#ff7675";
+                } else {
+                    let wrongIndex = -1;
+                    for(let i=0; i<9; i++) {
+                        if(userBoard[i] && !userBoard[i].isFixed && userBoard[i].id !== absoluteSolution[i].id) {
+                            wrongIndex = i; break;
+                        }
+                    }
+                    if (wrongIndex !== -1) {
+                        userBoard[wrongIndex] = null; if (activeHint && activeHint.index === wrongIndex) activeHint = null;
+                        renderGameGrid(); playSound('action'); levelInfo.innerText = `🔥 火焰：燒毀場上 1 個錯誤的魔石！`; levelInfo.style.color = "#ff7675";
+                    }
+                }
+            } else if (key === 'ice') {
+                let unfrozenFixed = Object.keys(currentLayoutConfig).filter(i => currentLayoutConfig[i].type === 'FIXED' && !frozenBlocks.has(parseInt(i)));
+                if (unfrozenFixed.length > 0) {
+                    let targetIdx = unfrozenFixed.find(idx => userBoard[idx].rot !== solutionFixedRotations.get(parseInt(idx))) || unfrozenFixed[0];
+                    userBoard[targetIdx].rot = solutionFixedRotations.get(parseInt(targetIdx)); frozenBlocks.add(parseInt(targetIdx));
+                    renderGameGrid(); playSound('ice'); levelInfo.innerText = `❄️ 冰雪：已校正並凍結！`; levelInfo.style.color = "#74b9ff";
+                }
+            } else if (key === 'shadow') {
+                let validTargets = shadowTargetIndices.filter(idx => !shadowEaten[idx] || shadowEaten[idx].length < 4);
+                if (validTargets.length > 0) {
+                    let targetIdx = validTargets[shadowTurn % validTargets.length];
+                    if (!shadowEaten[targetIdx]) shadowEaten[targetIdx] = [];
+                    let available = [0,1,2,3].filter(c => !shadowEaten[targetIdx].includes(c));
+                    if(available.length > 0) { shadowEaten[targetIdx].push(available[0]); shadowTurn++; renderGameGrid(); playSound('action'); levelInfo.innerText = `🟣 闇影：侵蝕魔石！`; levelInfo.style.color = "#9b59b6"; }
+                }
+            }
+            setTimeout(() => { if(!isRoundWon && !isSolverUsed && levelInfo.innerText.includes("精靈")) { levelInfo.innerText = `等級 ${selectedLevel} (移除方塊才會扣血)`; levelInfo.style.color = "#f1c40f"; } }, 4000);
+        }
+
+        function nextLevel() {
+            clearInterval(timerInterval);
+            totalTimeSpent += timeElapsed;
+            
+            if (!isSolverUsed) {
+                stagesCleared++;
+                let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
+                totalGainedExp += reward.exp;
+            }
+
+            updateHUD(); currentRound++;
+            if (currentRound > 6) settleGame(true); else loadRound(currentRound);
+        }
+
+        function handleGameOver(msg) {
+            if (isRoundWon) return; 
+            clearInterval(timerInterval);
+            totalTimeSpent += timeElapsed; 
+            forceSolve(false);
+            let btnSolve = $('btn-solve'), levelInfo = $('level-info');
+            btnSolve.innerText = "💀 失敗"; btnSolve.className = "small-action-btn failed";
+            $('btn-reset').style.display = 'none'; $('sprite-action-bar').style.display = 'none';
+            levelInfo.innerText = msg; levelInfo.style.color = "#e74c3c";
+            playSound('error');
+        }
+
+        function forceSolve(manual = true) {
+            clearInterval(timerInterval);
+            setTimeout(() => {
+                if (absoluteSolution) {
+                    activeHint = null; 
+                    userBoard = absoluteSolution.map((b, i) => currentLayoutConfig[i].type === 'EMPTY' ? null : (b ? {...b} : null));
+                    renderGameGrid(); $('grid-container').classList.add('win-glow');
+                    $('btn-solve').disabled = true; $('btn-reset').disabled = true; 
+                    $('btn-next').style.display = 'none'; $('btn-settle').style.display = 'inline-block';
+                    $('top-ui-controls').style.display = 'none'; $('sprite-action-bar').style.display = 'none'; 
+                    isRoundWon = true; isSolverUsed = true; 
+                    if (manual) { let lvl = $('level-info'); lvl.innerText = "放棄，公布解答"; lvl.style.color = "#e74c3c"; }
+                }
+            }, 100);
+        }
+
+        function settleGame(isWin) {
+            if (isWin && !isSolverUsed && stagesCleared < 6) {
+                stagesCleared++;
+                let reward = calculateSingleRoundExp(selectedLevel, timeElapsed);
+                totalGainedExp += reward.exp;
+            }
+
+            if (stagesCleared < 6) {
+                const failMultipliers = { 0:0.10, 1:0.20, 2:0.35, 3:0.50, 4:0.65, 5:0.80 };
+                totalGainedExp = Math.floor(totalGainedExp * failMultipliers[stagesCleared]);
+                totalGainedPoints = 0; 
+                $('end-beast-msg').style.display = 'none';
+            }
+            
+            playerProfile.totalPlayTime += totalTimeSpent;
+            playerProfile.totalPlays += 1; 
+            
+            if (stagesCleared === 6) {
+                playerProfile.totalWins += 1;
+                totalGainedPoints = selectedLevel;
+
+                if (currentBeastId > 0) {
+                    $('end-beast-msg').style.display = 'block';
+                    if (!playerProfile.beasts.includes(currentBeastId)) {
+                        playerProfile.beasts.push(currentBeastId);
+                        $('end-beast-msg').innerText = `📖 首次收錄新魔物至聖典：Beast-0${currentBeastId}！`;
+                    } else {
+                        $('end-beast-msg').innerText = `📖 此魔物已在你的聖典中 (Beast-0${currentBeastId})`;
+                    }
+                } else {
+                    $('end-beast-msg').style.display = 'none';
+                }
+            }
+
+            playerProfile.exp += totalGainedExp;
+            playerProfile.points += totalGainedPoints;
+            
+            let leveledUp = false;
+            while(playerProfile.lvl < 99 && playerProfile.exp >= getExpForNextLevel(playerProfile.lvl)) {
+                playerProfile.exp -= getExpForNextLevel(playerProfile.lvl);
+                playerProfile.lvl++;
+                leveledUp = true;
+            }
+            if (playerProfile.lvl >= 99) playerProfile.exp = getExpForNextLevel(99);
+
+            $('end-modal').style.display = 'flex';
+            $('end-status-title').innerText = isWin ? "🎉 試煉成功" : "💀 試煉中斷";
+            $('end-title-desc').innerText = `挑戰難度：Level ${selectedLevel}`;
+            
+            $('end-score').innerText = `${totalGainedExp} EXP`; 
+            $('end-stages').innerText = `${stagesCleared} / 6`;
+            
+            $('end-exp-gain').innerText = `+${totalGainedExp} EXP`;
+            $('end-pts-gain').innerText = `+${totalGainedPoints} 點`;
+            $('end-level-up-msg').style.display = leveledUp ? 'block' : 'none';
+
+            saveProfile(); 
+        }
+
+        function updateTimerDisplay() { 
+            const m = Math.floor(timeElapsed / 60).toString().padStart(2, '0');
+            const s = (timeElapsed % 60).toString().padStart(2, '0'); 
+            $('timer-disp').innerText = `${m}:${s}`; 
+            
+            let mult = 2.0;
+            if (timeElapsed <= 30) mult = 2.0; 
+            else if (timeElapsed <= 60) mult = 1.5; 
+            else if (timeElapsed <= 120) mult = 1.0; 
+            else mult = 0;
+            
+            let mDisp = $('mult-disp');
+            if (mult > 0) { mDisp.innerText = `${mult.toFixed(1)}x`; mDisp.style.color = mult === 2.0 ? '#f1c40f' : mult === 1.5 ? '#3498db' : '#ecf0f1'; } 
+            else { mDisp.innerText = `MIN`; mDisp.style.color = '#e74c3c'; }
+
+            if (240 - timeElapsed <= 30) $('timer-disp').classList.add('urgent');
+            else $('timer-disp').classList.remove('urgent');
+        }
+        
+        function updateTimeBar() { 
+            const bar = $('time-bar-fill');
+            let pct = Math.max(0, ((240 - timeElapsed) / 240) * 100);
+            bar.style.width = `${pct}%`; bar.className = `time-bar-fill ${pct > 50 ? 'state-purple' : pct > 25 ? 'state-blue' : 'state-red'}`; 
+        }
+
+        function updateHUD() { 
+            $('round-disp').innerText = `${currentRound} / 6`; 
+            $('lives-disp').innerText = '❤️'.repeat(lives) + '🖤'.repeat(maxLives - lives); 
+        }
+        
+        function resetLevel() { 
+            if (isRoundWon || isSolverUsed) return; playSound('action'); activeHint = null; 
+            for (let i = 0; i < 9; i++) { if (currentLayoutConfig[i].type === 'FIXED') { userBoard[i].rot = frozenBlocks.has(i) ? solutionFixedRotations.get(i) : 0; userBoard[i].face = currentLayoutConfig[i].face; } else { userBoard[i] = null; } } 
+            renderGameGrid(); lastValidLineCount = 0; 
+        }
+        
+        function getRotatedMatrix(m, times) { for (let t = 0; t < times; t++) m = [[m[1][0], m[0][0]], [m[1][1], m[0][1]]]; return m; }
+        function getFullGrid(boardState = userBoard) { let fullGrid = Array(6).fill().map(() => Array(6).fill(0)); for(let i=0; i<9; i++) { if(!boardState[i] || currentLayoutConfig[i].type === 'EMPTY') continue; let b = boardState[i], r = Math.floor(i / 3) * 2, c = (i % 3) * 2; let baseMatrix = [ [BLOCKS[b.id][b.face][0][0], BLOCKS[b.id][b.face][0][1]], [BLOCKS[b.id][b.face][1][0], BLOCKS[b.id][b.face][1][1]] ]; if (shadowEaten[i]) { if (shadowEaten[i].includes(0)) baseMatrix[0][0] = 0; if (shadowEaten[i].includes(1)) baseMatrix[0][1] = 0; if (shadowEaten[i].includes(2)) baseMatrix[1][0] = 0; if (shadowEaten[i].includes(3)) baseMatrix[1][1] = 0; } let matrix = getRotatedMatrix(baseMatrix, b.rot); fullGrid[r][c] = matrix[0][0]; fullGrid[r][c+1] = matrix[0][1]; fullGrid[r+1][c] = matrix[1][0]; fullGrid[r+1][c+1] = matrix[1][1]; } return fullGrid; }
+        function isLineValid(grid, idx, isRow) { let values = []; for (let k = 0; k < 6; k++) { const val = isRow ? grid[idx][k] : grid[k][idx]; if (val !== 0) values.push(val); } return values.length > 0 && new Set(values).size === values.length; }
+        function isValid(boardState) { let seenIDs = new Set(); for (let i = 0; i < 9; i++) { if (boardState[i] && currentLayoutConfig[i].type !== 'EMPTY') { if (seenIDs.has(boardState[i].id)) return false; seenIDs.add(boardState[i].id); } } let grid = getFullGrid(boardState); for (let i = 0; i < 6; i++) { let rSet = new Set(), cSet = new Set(); for (let j = 0; j < 6; j++) { let rVal = grid[i][j], cVal = grid[j][i]; if (rVal !== 0) { if (rSet.has(rVal)) return false; rSet.add(rVal); } if (cVal !== 0) { if (cSet.has(cVal)) return false; cSet.add(cVal); } } } return true; }
+        
+        function updateGlowsAndWin() { const glowLayer = $('glow-layer'), grid = getFullGrid(); glowLayer.innerHTML = ''; let currentValidLineCount = 0; for (let r = 0; r < 3; r++) { let cnt = (userBoard[r*3] && currentLayoutConfig[r*3].type !== 'EMPTY' ?1:0) + (userBoard[r*3+1] && currentLayoutConfig[r*3+1].type !== 'EMPTY'?1:0) + (userBoard[r*3+2] && currentLayoutConfig[r*3+2].type !== 'EMPTY'?1:0); if (cnt > 1 && isLineValid(grid, r*2, true) && isLineValid(grid, r*2+1, true)) { const glow = document.createElement('div'); glow.className = 'glow-bar glow-row'; glow.style.top = (r * 33.33 + 0.5) + '%'; glowLayer.appendChild(glow); currentValidLineCount++; } } for (let c = 0; c < 3; c++) { let cnt = (userBoard[c] && currentLayoutConfig[c].type !== 'EMPTY'?1:0) + (userBoard[c+3] && currentLayoutConfig[c+3].type !== 'EMPTY'?1:0) + (userBoard[c+6] && currentLayoutConfig[c+6].type !== 'EMPTY'?1:0); if (cnt > 1 && isLineValid(grid, c*2, false) && isLineValid(grid, c*2+1, false)) { const glow = document.createElement('div'); glow.className = 'glow-bar glow-col'; glow.style.left = (c * 33.33 + 0.5) + '%'; glowLayer.appendChild(glow); currentValidLineCount++; } } if (currentValidLineCount > lastValidLineCount) playSound('bonus'); lastValidLineCount = currentValidLineCount; const isFull = userBoard.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || b !== null); if (isFull && isValid(userBoard) && !isRoundWon) { isRoundWon = true; clearInterval(timerInterval); playSound('win'); $('grid-container').classList.add('win-glow'); $('btn-next').style.display = 'inline-block'; $('top-ui-controls').style.display = 'none'; $('sprite-action-bar').style.display = 'none'; } }
+        
+        function renderGameGrid() { const container = $('grid-container'); container.innerHTML = ''; const glowLayer = document.createElement('div'); glowLayer.className = 'glow-overlay'; glowLayer.id = 'glow-layer'; container.appendChild(glowLayer); for(let i=0; i<9; i++) { const config = currentLayoutConfig[i], block = userBoard[i], div = document.createElement('div'); if (config.type === 'EMPTY') { div.className = 'block empty-slot'; div.style.visibility = 'hidden'; } else { div.className = 'block'; if (block) { div.classList.add(block.isFixed ? 'fixed' : 'user-placed'); if (frozenBlocks.has(i)) div.classList.add('frozen'); div.innerHTML = `<div class="block-content" style="position:absolute; width:100%; height:100%; transform: rotate(${block.rot * 90}deg); display:flex; justify-content:center; align-items:center;"><img src="images/block_${block.face}-0${block.id}.png" class="block-image" draggable="false"></div>`; if (shadowEaten[i]) { const contentDiv = div.querySelector('.block-content'); shadowEaten[i].forEach(cornerIdx => { const voidEl = document.createElement('div'); voidEl.className = `void-erosion corner-${cornerIdx}`; contentDiv.appendChild(voidEl); }); } if (activeHint && activeHint.index === i) { div.innerHTML += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0, 0, 0, 0.3); z-index:10; display:flex; justify-content:center; align-items:center; border-radius:6px; border: 2px solid #e74c3c; box-shadow: inset 0 0 15px rgba(231, 76, 60, 0.8); pointer-events:none; animation: pulseRed 1.5s infinite;"><img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.9; transform: rotate(0deg); filter: drop-shadow(0 0 5px #f1c40f);"></div>`; } 
+            
+            const edgeZone = document.createElement('div'); edgeZone.className = 'zone-edge'; edgeZone.onclick = (e) => { e.stopPropagation(); if (userBoard[i] && !isRoundWon && !frozenBlocks.has(i)) { userBoard[i].rot = (userBoard[i].rot + 1) % 4; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } }; div.appendChild(edgeZone); 
+            
+            if (!block.isFixed) { 
+                const centerZone = document.createElement('div'); centerZone.className = 'zone-center'; centerZone.onclick = (e) => { e.stopPropagation(); if (userBoard[i] && !userBoard[i].isFixed && !isRoundWon) { userBoard[i].face = userBoard[i].face === 'B' ? 'W' : 'B'; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } }; 
+                
+                const startLongPress = () => { longPressTimer = setTimeout(() => { 
+                    if (isRoundWon || (userBoard[i] && userBoard[i].isFixed)) return; 
+                    
+                    if (lives <= 0) {
+                        handleGameOver("生命耗盡，無法再更換魔石！");
+                        return;
+                    }
+                    lives--;
+                    updateHUD();
+
+                    userBoard[i] = null; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); 
+                }, 600); }; 
+                const cancelLongPress = () => clearTimeout(longPressTimer); centerZone.addEventListener('mousedown', startLongPress); centerZone.addEventListener('touchstart', startLongPress); centerZone.addEventListener('mouseup', cancelLongPress); centerZone.addEventListener('touchend', cancelLongPress); centerZone.addEventListener('mouseleave', cancelLongPress); div.appendChild(centerZone); 
+            } } else { div.className = 'empty-slot'; if (activeHint && activeHint.index === i) { div.innerHTML = `<img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.4; transform: rotate(0deg); pointer-events:none;">`; div.style.borderColor = '#f39c12'; div.style.boxShadow = 'inset 0 0 15px rgba(243, 156, 18, 0.4)'; } else { div.innerHTML = '+'; div.style.borderColor = ''; div.style.boxShadow = ''; } 
+            
+            div.onclick = () => { if (isRoundWon) return; if (activeHint && activeHint.index === i) { activeHint = null; renderGameGrid(); } pickingSlot = i; pickerFace = 'B'; renderPickerGrid(); $('picker-modal').style.display = 'flex'; }; } } container.appendChild(div); } updateGlowsAndWin(); }
+        
+        function getAvailableBlocks() { const used = new Set(); userBoard.forEach((b, i) => { if(b && currentLayoutConfig[i].type !== 'EMPTY') used.add(b.id); }); return [1,2,3,4,5,6,7,8,9].filter(id => !used.has(id) && !permanentlyRemovedBlocks.has(id)); }
+        
+        function renderPickerGrid() { const grid = $('picker-grid'); $('picker-title').innerText = `選擇魔石 (${pickerFace}面)`; grid.innerHTML = ''; getAvailableBlocks().forEach(id => { const div = document.createElement('div'); div.className = 'picker-item'; div.innerHTML = `<img src="images/block_${pickerFace}-0${id}.png">`; 
+            
+            div.onclick = () => { if (activeHint && activeHint.index === pickingSlot) activeHint = null; userBoard[pickingSlot] = { id: id, face: pickerFace, rot: 0, isFixed: false }; closePicker(); playSound('action'); renderGameGrid(); updateGlowsAndWin(); }; grid.appendChild(div); 
+        }); }
+        function closePicker() { $('picker-modal').style.display = 'none'; }
+        function togglePickerFace() { pickerFace = (pickerFace === 'B') ? 'W' : 'B'; renderPickerGrid(); }
+
+        window.onload = () => { updateStartScreen(); }
+</script>
+</body>
+</html>

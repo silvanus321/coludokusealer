@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>色獨封印師 (19.2 聖典擴充版)</title>
+    <title>色獨封印師 (19.3 聖典完整圖鑑版)</title>
     <style>
         /* --- 1. 基礎設定 --- */
         body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #2c3e50; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: white; min-height: 100vh; }
@@ -141,12 +141,17 @@
         .picker-item { border: 1px solid #ddd; border-radius: 8px; padding: 5px; cursor: pointer; }
         .picker-item img { width: 100%; }
         
-        /* 怪物聖典樣式 */
-        .beast-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 15px; max-height: 50vh; overflow-y: auto; padding-right: 5px;}
-        .beast-item { background: rgba(0,0,0,0.3); border: 2px solid #bdc3c7; border-radius: 8px; overflow: hidden; aspect-ratio: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+        /* 怪物聖典 6格並排與分類樣式 */
+        .beast-grid-container { display: flex; flex-direction: column; gap: 15px; margin-top: 15px; max-height: 60vh; overflow-y: auto; padding-right: 5px; overflow-x: hidden; }
+        .beast-level-section { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .beast-level-title { text-align: left; font-size: 1rem; color: #f1c40f; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 5px; margin-bottom: 8px; font-weight: bold;}
+        .beast-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+        .beast-item { background: rgba(0,0,0,0.4); border: 1px solid #7f8c8d; border-radius: 4px; overflow: hidden; aspect-ratio: 1; display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; transition: transform 0.1s;}
+        .beast-item:active { transform: scale(0.95); }
         .beast-item img { width: 100%; height: 100%; object-fit: cover; }
+        .beast-item.locked { cursor: not-allowed; }
         .beast-item.locked img { filter: brightness(0) opacity(0.3); }
-        .beast-item.locked::after { content: '🔒'; position: absolute; font-size: 2rem; }
+        .beast-item.locked::after { content: '🔒'; position: absolute; font-size: 1.2rem; }
 
         .level-boards-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; width: 100%;}
         
@@ -177,7 +182,7 @@
                 </div>
                 
                 <div onclick="openBeastModal()" style="text-align: center; margin-bottom: 10px; font-size: 0.85rem; color: #e056fd; font-weight: bold; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; cursor: pointer; border: 1px solid #9b59b6; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                    📖 點擊查看怪物聖典 (<span id="ui-prof-beasts" style="font-size: 1rem;">0/18</span>)
+                    📖 點擊查看怪物聖典 (<span id="ui-prof-beasts" style="font-size: 1rem;">0/120</span>)
                 </div>
 
                 <div class="skills-grid">
@@ -256,9 +261,16 @@
     <div id="beast-modal" class="modal-overlay" onclick="closeBeastModal()">
         <div class="modal-content" onclick="event.stopPropagation()" style="background: #2c3e50; color: white; border: 2px solid #9b59b6;">
             <h3 style="color: #e056fd; margin-top: 0; letter-spacing: 2px;">📖 怪物聖典</h3>
-            <div style="font-size: 0.8rem; color: #bdc3c7;">挑戰 Level 1~3 來收錄所有的魔物吧！</div>
-            <div id="beast-grid" class="beast-grid"></div>
+            <div style="font-size: 0.8rem; color: #bdc3c7;">挑戰各個等級的關卡來解鎖專屬魔物！</div>
+            <div id="beast-grid-container" class="beast-grid-container"></div>
             <button class="action-btn" style="padding:10px 30px; margin-top: 20px; background-color: #7f8c8d;" onclick="closeBeastModal()">關閉圖鑑</button>
+        </div>
+    </div>
+
+    <div id="zoom-modal" class="modal-overlay" onclick="closeZoomModal()" style="z-index: 10000; display: none;">
+        <div style="position: relative; max-width: 95%; max-height: 90%; background: #2c3e50; padding: 10px; border-radius: 10px; border: 2px solid #f1c40f; box-shadow: 0 0 30px rgba(0,0,0,0.8);" onclick="event.stopPropagation()">
+            <div style="position: absolute; top: -15px; right: -15px; width: 35px; height: 35px; background: #e74c3c; color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5);" onclick="closeZoomModal()">X</div>
+            <img id="zoom-img" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; border-radius: 5px;">
         </div>
     </div>
 
@@ -290,7 +302,7 @@
         const $ = id => document.getElementById(id);
 
         /* ==============================================================
-           1. RPG 系統：資料儲存與公式
+           1. RPG 系統：資料儲存與公式 
         ============================================================== */
         let playerProfile = JSON.parse(localStorage.getItem('coludoku_rpg_v19')) || {
             name: "", lvl: 1, exp: 0, points: 0,
@@ -355,7 +367,7 @@
             let h = Math.floor(sec / 3600);
             let m = Math.floor((sec % 3600) / 60);
             let s = sec % 60;
-            if (h > 0) return `${h}时 ${m.toString().padStart(2,'0')}分 ${s.toString().padStart(2,'0')}秒`;
+            if (h > 0) return `${h}時 ${m.toString().padStart(2,'0')}分 ${s.toString().padStart(2,'0')}秒`;
             return `${m.toString().padStart(2,'0')}分 ${s.toString().padStart(2,'0')}秒`;
         }
 
@@ -372,7 +384,7 @@
             let winRate = playerProfile.totalPlays > 0 ? ((playerProfile.totalWins / playerProfile.totalPlays) * 100).toFixed(1) : 0;
             $('ui-prof-wins').innerText = `${winRate}% (${playerProfile.totalWins}/${playerProfile.totalPlays})`;
             $('ui-prof-time').innerText = formatTotalTime(playerProfile.totalPlayTime);
-            $('ui-prof-beasts').innerText = `${playerProfile.beasts.length}/18`; // 擴充為 18
+            $('ui-prof-beasts').innerText = `${playerProfile.beasts.length}/120`; // 支援 20個等級 * 6張圖 = 120張
 
             const btnContainer = $('level-buttons-container');
             btnContainer.innerHTML = '';
@@ -431,25 +443,62 @@
             playSound('bonus');
         }
 
-        // --- 怪物聖典視窗控制 (擴充為 18 隻) ---
+        // --- 怪物聖典視窗控制 (依等級分類，每排6個) ---
         function openBeastModal() {
             playSound('action');
-            const grid = $('beast-grid');
-            grid.innerHTML = '';
-            for (let i = 1; i <= 18; i++) {
-                const div = document.createElement('div');
-                const isUnlocked = playerProfile.beasts.includes(i);
-                div.className = `beast-item ${isUnlocked ? '' : 'locked'}`;
-                // 補 0 邏輯，確保檔名為 01~18
-                const formattedId = i < 10 ? `0${i}` : i; 
-                div.innerHTML = `<img src="images/beast-${formattedId}.png" alt="Beast ${i}" onerror="this.src=''; this.alt='❓'">`;
-                grid.appendChild(div);
+            const container = $('beast-grid-container');
+            container.innerHTML = '';
+            
+            // 迴圈產出 20 個 Level 區塊 (為未來更新保留空間)
+            for (let level = 1; level <= 20; level++) {
+                let section = document.createElement('div');
+                section.className = 'beast-level-section';
+                
+                let title = document.createElement('div');
+                title.className = 'beast-level-title';
+                title.innerText = `Lv.${level} 專屬魔物`;
+                section.appendChild(title);
+                
+                let row = document.createElement('div');
+                row.className = 'beast-row';
+                
+                let startId = (level - 1) * 6 + 1;
+                for (let i = startId; i < startId + 6; i++) {
+                    const div = document.createElement('div');
+                    const isUnlocked = playerProfile.beasts.includes(i);
+                    div.className = `beast-item ${isUnlocked ? '' : 'locked'}`;
+                    
+                    const formattedId = i.toString().padStart(2, '0'); // 自動補 0 (例如: 01, 09, 18, 120)
+                    const imgSrc = `images/beast-${formattedId}.png`;
+
+                    div.innerHTML = `<img src="${imgSrc}" alt="Beast ${i}" onerror="this.src=''; this.alt='❓'">`;
+                    
+                    if (isUnlocked) {
+                        div.onclick = (e) => { e.stopPropagation(); zoomImage(imgSrc); };
+                    } else {
+                        div.onclick = (e) => { e.stopPropagation(); alert(`請先在 Level ${level} 成功通關，才有機會解鎖此魔物！`); };
+                    }
+                    row.appendChild(div);
+                }
+                section.appendChild(row);
+                container.appendChild(section);
             }
             $('beast-modal').style.display = 'flex';
         }
 
         function closeBeastModal() {
             $('beast-modal').style.display = 'none';
+        }
+
+        // --- 放大圖片功能 ---
+        function zoomImage(src) {
+            playSound('action');
+            $('zoom-img').src = src;
+            $('zoom-modal').style.display = 'flex';
+        }
+
+        function closeZoomModal() {
+            $('zoom-modal').style.display = 'none';
         }
 
         function saveProfile() { localStorage.setItem('coludoku_rpg_v19', JSON.stringify(playerProfile)); }
@@ -523,15 +572,12 @@
             stagesCleared = 0;
             totalTimeSpent = 0; 
 
-            // 【依據關卡難度抽取魔物】
-            if (selectedLevel === 1) {
-                currentBeastId = Math.floor(Math.random() * 6) + 1; // 1~6
-            } else if (selectedLevel === 2) {
-                currentBeastId = Math.floor(Math.random() * 6) + 7; // 7~12
-            } else if (selectedLevel === 3) {
-                currentBeastId = Math.floor(Math.random() * 6) + 13; // 13~18
+            // 【依據關卡難度抽取魔物，完美支援 1~20 級的公式】
+            if (selectedLevel >= 1 && selectedLevel <= 20) {
+                let startId = (selectedLevel - 1) * 6 + 1;
+                currentBeastId = startId + Math.floor(Math.random() * 6);
             } else {
-                currentBeastId = 0; // LV4以上不抽魔物
+                currentBeastId = 0; 
             }
             
             maxLives = getMaxLives(playerProfile.lvl);
@@ -559,7 +605,7 @@
 
             const grid = $('grid-container');
             if (currentBeastId > 0) {
-                const formattedId = currentBeastId < 10 ? `0${currentBeastId}` : currentBeastId;
+                const formattedId = currentBeastId.toString().padStart(2, '0');
                 grid.style.backgroundImage = `linear-gradient(rgba(52, 73, 94, 0.85), rgba(52, 73, 94, 0.85)), url('images/beast-${formattedId}.png')`;
                 grid.style.backgroundSize = 'cover';
                 grid.style.backgroundPosition = 'center';
@@ -873,10 +919,10 @@
                     $('end-beast-msg').style.display = 'block';
                     if (!playerProfile.beasts.includes(currentBeastId)) {
                         playerProfile.beasts.push(currentBeastId);
-                        const formattedId = currentBeastId < 10 ? `0${currentBeastId}` : currentBeastId;
+                        const formattedId = currentBeastId.toString().padStart(2, '0');
                         $('end-beast-msg').innerText = `📖 首次收錄新魔物至聖典：Beast-${formattedId}！`;
                     } else {
-                        const formattedId = currentBeastId < 10 ? `0${currentBeastId}` : currentBeastId;
+                        const formattedId = currentBeastId.toString().padStart(2, '0');
                         $('end-beast-msg').innerText = `📖 此魔物已在你的聖典中 (Beast-${formattedId})`;
                     }
                 } else {

@@ -354,14 +354,13 @@
         function getSkillCost(lvl) { return 0; }
         
         function getMaxLives(lvl) {
-            if (lvl <= 20) return 2;
-            if (lvl <= 60) return 3;
-            return 4;
+            if (lvl >= 60) return 4;
+            if (lvl >= 20) return 3;
+            return 2;
         }
         
         function getSkillConfig(id, lvl) {
-            const CD_MAP = { holy: {min:40,max:240}, earth: {min:60,max:300}, fire: {min:20,max:120}, ice: {min:30,max:180}, shadow: {min:10,max:60} };
-            if (id === 'nature') return { cd: Math.round(180 * Math.exp(-0.02 * (lvl - 1))) }; 
+            const CD_MAP = { holy: {min:40,max:240}, earth: {min:50,max:300}, fire: {min:20,max:120}, ice: {min:30,max:180}, shadow: {min:10,max:60}, nature: {min:60,max:360} };
             return { cd: Math.round(CD_MAP[id].min + (CD_MAP[id].max - CD_MAP[id].min) * Math.exp(-0.05 * (lvl - 1))) };
         }
         
@@ -572,9 +571,11 @@
 
         function initRunSprites() {
             runSprites = {};
+            let chargesCap = playerProfile.lvl >= 60 ? 3 : (playerProfile.lvl >= 20 ? 2 : 1);
+            
             ['holy', 'earth', 'nature'].forEach(key => {
                 let conf = getSkillConfig(key, playerProfile.skills[key]);
-                runSprites[key] = { type: 'active', sym: getSpriteSymbol(key), cd: conf.cd, timer: conf.cd, charges: 1, maxCharges: 2, power: 0, theme: `theme-${key}` };
+                runSprites[key] = { type: 'active', sym: getSpriteSymbol(key), cd: conf.cd, timer: conf.cd, charges: 0, maxCharges: chargesCap, power: 0, theme: `theme-${key}` };
             });
             ['shadow', 'ice', 'fire'].forEach(key => {
                 let conf = getSkillConfig(key, playerProfile.skills[key]);
@@ -600,7 +601,8 @@
                 currentBeastId = startId + Math.floor(Math.random() * 6);
             } else { currentBeastId = 0; }
             
-            maxLives = getMaxLives(playerProfile.lvl); lives = maxLives; 
+            maxLives = getMaxLives(playerProfile.lvl); 
+            lives = 2; // 基礎生命值永遠從 2 開始
             
             initRunSprites(); loadRound(currentRound);
         }
@@ -949,10 +951,29 @@
                 if (unfrozenFixed.length > 0) {
                     let targetIdx = unfrozenFixed.find(idx => userBoard[idx].rot !== solutionFixedRotations.get(parseInt(idx))) || unfrozenFixed[0];
                     userBoard[targetIdx].rot = solutionFixedRotations.get(parseInt(targetIdx)); frozenBlocks.add(parseInt(targetIdx));
-                    renderGameGrid(); playSound('ice'); levelInfo.innerText = `❄️ 冰雪：已校正並凍結！`; levelInfo.style.color = "#74b9ff";
+                    renderGameGrid(); playSound('ice'); levelInfo.innerText = `❄️ 冰雪：已校正並凍結提示塊！`; levelInfo.style.color = "#74b9ff";
+                } else {
+                    let wrongOrientationIdx = -1;
+                    for (let i = 0; i < 9; i++) {
+                        if (userBoard[i] && !userBoard[i].isFixed && !userBoard[i].isPreview && !frozenBlocks.has(i)) {
+                            if (userBoard[i].id === absoluteSolution[i].id && (userBoard[i].rot !== absoluteSolution[i].rot || userBoard[i].face !== absoluteSolution[i].face)) {
+                                wrongOrientationIdx = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (wrongOrientationIdx !== -1) {
+                        userBoard[wrongOrientationIdx].rot = absoluteSolution[wrongOrientationIdx].rot;
+                        userBoard[wrongOrientationIdx].face = absoluteSolution[wrongOrientationIdx].face;
+                        frozenBlocks.add(wrongOrientationIdx);
+                        renderGameGrid(); playSound('ice'); levelInfo.innerText = `❄️ 冰雪：已鎖定並凍結正確魔石！`; levelInfo.style.color = "#74b9ff";
+                    }
                 }
             } else if (key === 'shadow') {
                 let validTargets = shadowTargetIndices.filter(idx => !shadowEaten[idx] || shadowEaten[idx].length < 4);
+                if (validTargets.length === 0) {
+                    validTargets = Array.from(frozenBlocks).filter(idx => !shadowEaten[idx] || shadowEaten[idx].length < 4);
+                }
                 if (validTargets.length > 0) {
                     let targetIdx = validTargets[shadowTurn % validTargets.length];
                     if (!shadowEaten[targetIdx]) shadowEaten[targetIdx] = [];
@@ -1245,10 +1266,10 @@
                 
                             if (!block.isFixed) { 
                                 const centerZone = document.createElement('div'); centerZone.className = 'zone-center'; 
-                                centerZone.onclick = (e) => { e.stopPropagation(); pickingSlot = -1; if (userBoard[i] && !userBoard[i].isFixed && !isRoundWon) { userBoard[i].face = userBoard[i].face === 'B' ? 'W' : 'B'; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } else { renderGameGrid(); } }; 
+                                centerZone.onclick = (e) => { e.stopPropagation(); pickingSlot = -1; if (userBoard[i] && !userBoard[i].isFixed && !isRoundWon && !frozenBlocks.has(i)) { userBoard[i].face = userBoard[i].face === 'B' ? 'W' : 'B'; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } else { renderGameGrid(); } }; 
                     
                                 const startLongPress = () => { longPressTimer = setTimeout(() => { 
-                                    if (isRoundWon || (userBoard[i] && userBoard[i].isFixed)) return; 
+                                    if (isRoundWon || (userBoard[i] && userBoard[i].isFixed) || frozenBlocks.has(i)) return; 
                                     if (lives <= 0) return; 
                                     lives--; updateHUD();
                                     userBoard[i] = null; if (activeHint && activeHint.index === i) activeHint = null; pickingSlot = -1; playSound('action'); renderGameGrid(); updateGlowsAndWin(); 

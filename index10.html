@@ -45,6 +45,7 @@
         @keyframes errorShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
         .main-grid.error-shake { animation: errorShake 0.2s 2; border: 2px solid #e74c3c; box-shadow: 0 0 25px rgba(231, 76, 60, 0.8); }
         @keyframes pulse { 0%, 100% { box-shadow: 0 0 15px 5px rgba(241, 196, 15, 0.4); } 50% { box-shadow: 0 0 30px 15px rgba(241, 196, 15, 0.8); } }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
         .block { background-color: #ecf0f1; border: 2px solid transparent; position: relative; border-radius: 6px; overflow: hidden; display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .block.fixed { border-color: #c0392b; background-color: #fadbd8; }
@@ -259,8 +260,7 @@
         <div class="hud-item">倍率 <span id="mult-disp" class="hud-val" style="color:#f1c40f;">2.0x</span></div>
     </div>
 
-    <div id="top-ui-controls" class="top-controls-container">
-        <button id="btn-reset" class="small-action-btn btn-reset" onclick="resetLevel()">🔄 重置</button>
+    <div id="top-ui-controls" class="top-controls-container" style="justify-content: flex-end;">
         <button id="btn-flip" class="small-action-btn" style="display:none; background-color:#9b59b6; padding: 6px 10px;" onclick="togglePickerFace(event)">🔁 翻頁</button>
         <div class="time-bar-container"><div id="time-bar-fill" class="time-bar-fill state-purple"></div></div>
         <button id="btn-solve" class="small-action-btn give-up" onclick="handleGameOver('放棄挑戰，試煉中斷！')">🏳️ 放棄</button>
@@ -272,7 +272,7 @@
 
         <div id="grid-container" class="main-grid"></div>
         <button id="btn-next" class="action-btn" style="display:none;" onclick="nextLevel()">下一關 ➡️</button>
-        <button id="btn-settle" class="action-btn" style="display:none; background-color:#e74c3c;" onclick="settleGame(false)">結算退出</button>
+        <button id="btn-settle" class="action-btn" style="display:none; background-color:#e74c3c;" onclick="settleGame(false)">結算成績</button>
         
         <div id="sprite-action-bar" class="sprite-action-bar"></div>
     </div>
@@ -308,7 +308,7 @@
                     <div style="font-weight:bold; color:#2c3e50;">🎁 試煉獎勵：</div>
                     <div style="color:#2ecc71;">獲得經驗值：<span id="end-exp-gain">+0 EXP</span></div>
                     <div id="end-level-up-msg" style="color:#f39c12; font-weight:bold; display:none;">🎉 封印師升級了！解鎖新難度！</div>
-                    <div style="color:#e74c3c; display:none;">獲得能力點數：<span id="end-pts-gain">+0 點</span> <small>(需通關6局)</small></div>
+                    <div id="end-pts-container" style="color:#e74c3c; font-weight:bold; margin-top:5px;">獲得能力點數：<span id="end-pts-gain">+0 點</span></div>
                     <div id="end-beast-msg" style="color:#9b59b6; font-weight:bold; margin-top:5px; display:none;">📖 成功收錄魔物！</div>
                 </div>
             </div>
@@ -372,8 +372,8 @@
             if (timeSpentSeconds <= 30) finalExp = Math.floor(baseExp * 2.0);
             else if (timeSpentSeconds <= 60) finalExp = Math.floor(baseExp * 1.5);
             else if (timeSpentSeconds <= 120) finalExp = Math.floor(baseExp * 1.0);
-            else if (timeSpentSeconds <= 240) finalExp = Math.floor(baseExp * 0.5); // 2~4分鐘給 50% 的過渡
-            else finalExp = Math.max(1, Math.floor(baseExp * 0.1)); // 超過 4 分鐘 (240秒) 剩下 10%
+            else if (timeSpentSeconds <= 240) finalExp = Math.floor(baseExp * 0.5); 
+            else finalExp = Math.max(1, Math.floor(baseExp * 0.1)); 
             return { exp: finalExp };
         }
 
@@ -552,10 +552,8 @@
         let currentBeastId = 0; 
         let runSprites = {};
         
-        // 全域選取預覽面
         let pickerFace = 'B';
 
-        // 全域切換預覽面的函數
         window.togglePickerFace = function(e) {
             if (e) e.stopPropagation();
             pickerFace = pickerFace === 'B' ? 'W' : 'B';
@@ -602,7 +600,7 @@
             } else { currentBeastId = 0; }
             
             maxLives = getMaxLives(playerProfile.lvl); 
-            lives = 2; // 基礎生命值永遠從 2 開始
+            lives = 2; 
             
             initRunSprites(); loadRound(currentRound);
         }
@@ -659,6 +657,9 @@
             $('grid-container').classList.remove('win-glow'); $('timer-disp').classList.remove('urgent');
 
             const grid = $('grid-container');
+            const existingClear = grid.querySelector('#clear-overlay');
+            if (existingClear) existingClear.remove();
+
             if (currentBeastId > 0) {
                 const formattedId = currentBeastId.toString().padStart(2, '0');
                 grid.style.backgroundImage = `linear-gradient(rgba(52, 73, 94, 0.85), rgba(52, 73, 94, 0.85)), url('images/beast-${formattedId}.png')`;
@@ -686,7 +687,30 @@
                 let rot = Math.floor(Math.random() * 4), mir = Math.random() > 0.5; 
                 let activeArr = transformShape(baseShape, rot, mir);
                 
-                let chosenTargets = [...activeArr].sort(() => Math.random() - 0.5).slice(0, minTargets);
+                let chosenTargets = [];
+                let targetAttempts = 0;
+                while(targetAttempts < 50) {
+                    let shuffled = [...activeArr].sort(() => Math.random() - 0.5);
+                    chosenTargets = [shuffled[0]];
+                    for (let i = 1; i < shuffled.length; i++) {
+                        let candidate = shuffled[i];
+                        let isAdj = chosenTargets.some(t => {
+                            let r1 = Math.floor((candidate - 1) / 3), c1 = (candidate - 1) % 3;
+                            let r2 = Math.floor((t - 1) / 3), c2 = (t - 1) % 3;
+                            return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1; 
+                        });
+                        if (!isAdj) {
+                            chosenTargets.push(candidate);
+                            if (chosenTargets.length === minTargets) break;
+                        }
+                    }
+                    if (chosenTargets.length === minTargets) break;
+                    targetAttempts++;
+                }
+                if (chosenTargets.length < minTargets) {
+                    chosenTargets = [...activeArr].sort(() => Math.random() - 0.5).slice(0, minTargets);
+                }
+
                 let pureFace = Math.random() > 0.5 ? 'B' : 'W';
                 let allowedFaces = isPureColor ? [pureFace] : ['B', 'W'];
 
@@ -850,7 +874,6 @@
 
             let targetIndex = -1;
 
-            // 1. 第一優先：尋找「完全沒有放方塊」或「只有殘影」的空格
             let emptySlots = [];
             for(let i=0; i<9; i++) {
                 if(currentLayoutConfig[i].type === 'SOLVE') {
@@ -863,7 +886,6 @@
             if (emptySlots.length > 0) {
                 targetIndex = emptySlots[Math.floor(Math.random() * emptySlots.length)];
             } else {
-                // 2. 第二優先：如果全滿，才去檢查哪一個與絕對解答不符
                 for(let i=0; i<9; i++) {
                     if(currentLayoutConfig[i].type === 'SOLVE' && userBoard[i] && !userBoard[i].isPreview) {
                         if (userBoard[i].id !== absoluteSolution[i].id || userBoard[i].face !== absoluteSolution[i].face || userBoard[i].rot !== absoluteSolution[i].rot) {
@@ -1003,7 +1025,7 @@
             clearInterval(timerInterval); totalTimeSpent += timeElapsed; forceSolve(false);
             let btnSolve = $('btn-solve'), levelInfo = $('level-info');
             btnSolve.innerText = "💀 失敗"; btnSolve.className = "small-action-btn failed";
-            $('btn-reset').style.display = 'none'; $('sprite-action-bar').style.display = 'none';
+            $('sprite-action-bar').style.display = 'none';
             levelInfo.innerText = msg; levelInfo.style.color = "#e74c3c";
             playSound('error');
         }
@@ -1015,7 +1037,7 @@
                     activeHint = null; 
                     userBoard = absoluteSolution.map((b, i) => currentLayoutConfig[i].type === 'EMPTY' ? null : (b ? {...b} : null));
                     renderGameGrid(); $('grid-container').classList.add('win-glow');
-                    $('btn-solve').disabled = true; $('btn-reset').disabled = true; 
+                    $('btn-solve').disabled = true;
                     $('btn-next').style.display = 'none'; $('btn-settle').style.display = 'inline-block';
                     $('top-ui-controls').style.display = 'none'; $('sprite-action-bar').style.display = 'none'; 
                     isRoundWon = true; isSolverUsed = true; 
@@ -1033,15 +1055,14 @@
                 const failMultipliers = { 0:0.10, 1:0.20, 2:0.35, 3:0.50, 4:0.65, 5:0.80 };
                 totalGainedExp = Math.floor(totalGainedExp * failMultipliers[stagesCleared]);
                 totalGainedPoints = 0; $('end-beast-msg').style.display = 'none'; playerProfile.currentStreak = 0; 
+                $('end-pts-container').innerHTML = `獲得能力點數：<span style="color:#7f8c8d;">+0 點 <small>(未通關6局)</small></span>`;
             } else {
                 playerProfile.currentStreak += 1;
                 if (playerProfile.currentStreak > playerProfile.maxStreak) playerProfile.maxStreak = playerProfile.currentStreak;
-            }
-            
-            playerProfile.totalPlayTime += totalTimeSpent; playerProfile.totalPlays += 1; 
-            
-            if (stagesCleared === 6) {
+                
                 playerProfile.totalWins += 1; totalGainedPoints = selectedLevel;
+                $('end-pts-container').innerHTML = `獲得能力點數：<span style="color:#e74c3c;">+${totalGainedPoints} 點</span>`;
+                
                 if (currentBeastId > 0) {
                     $('end-beast-msg').style.display = 'block';
                     if (!playerProfile.beasts.includes(currentBeastId)) {
@@ -1054,6 +1075,8 @@
                     }
                 } else { $('end-beast-msg').style.display = 'none'; }
             }
+            
+            playerProfile.totalPlayTime += totalTimeSpent; playerProfile.totalPlays += 1; 
 
             playerProfile.exp += totalGainedExp; playerProfile.points += totalGainedPoints;
             
@@ -1101,23 +1124,12 @@
             $('lives-disp').innerText = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, maxLives - lives)); 
         }
         
-        function resetLevel() { 
-            if (isRoundWon || isSolverUsed) return; playSound('action'); activeHint = null; pickingSlot = -1;
-            for (let i = 0; i < 9; i++) { 
-                if (currentLayoutConfig[i].type === 'FIXED') { 
-                    userBoard[i].rot = frozenBlocks.has(i) ? solutionFixedRotations.get(i) : initialScrambledRotations.get(i); 
-                    userBoard[i].face = currentLayoutConfig[i].face; 
-                } else { userBoard[i] = null; } 
-            } 
-            renderGameGrid(); lastValidLineCount = 0; 
-        }
-        
         function getRotatedMatrix(m, times) { for (let t = 0; t < times; t++) m = [[m[1][0], m[0][0]], [m[1][1], m[0][1]]]; return m; }
         
         function getFullGrid(boardState = userBoard) { 
             let fullGrid = Array(6).fill().map(() => Array(6).fill(0)); 
             for(let i=0; i<9; i++) { 
-                if(!boardState[i] || currentLayoutConfig[i].type === 'EMPTY' || boardState[i].isPreview) continue; 
+                if(!boardState[i] || currentLayoutConfig[i].type === 'EMPTY' || boardState[i].isPreview || boardState[i].isConfirmingDelete) continue; 
                 let b = boardState[i], r = Math.floor(i / 3) * 2, c = (i % 3) * 2; 
                 let baseMatrix = [ [BLOCKS[b.id][b.face][0][0], BLOCKS[b.id][b.face][0][1]], [BLOCKS[b.id][b.face][1][0], BLOCKS[b.id][b.face][1][1]] ]; 
                 if (shadowEaten[i]) { 
@@ -1135,7 +1147,7 @@
         function isValid(boardState) { 
             let seenIDs = new Set(); 
             for (let i = 0; i < 9; i++) { 
-                if (boardState[i] && !boardState[i].isPreview && currentLayoutConfig[i].type !== 'EMPTY') { 
+                if (boardState[i] && !boardState[i].isPreview && !boardState[i].isConfirmingDelete && currentLayoutConfig[i].type !== 'EMPTY') { 
                     if (seenIDs.has(boardState[i].id)) return false; 
                     seenIDs.add(boardState[i].id); 
                 } 
@@ -1152,7 +1164,7 @@
         }
         
         function isPlaced(idx) {
-            return userBoard[idx] !== null && !userBoard[idx].isPreview && currentLayoutConfig[idx].type !== 'EMPTY';
+            return userBoard[idx] !== null && !userBoard[idx].isPreview && !userBoard[idx].isConfirmingDelete && currentLayoutConfig[idx].type !== 'EMPTY';
         }
 
         function updateGlowsAndWin() { 
@@ -1171,7 +1183,7 @@
             } 
             if (currentValidLineCount > lastValidLineCount) playSound('bonus'); lastValidLineCount = currentValidLineCount; 
             
-            const isFull = userBoard.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || (b !== null && !b.isPreview)); 
+            const isFull = userBoard.every((b, i) => currentLayoutConfig[i].type === 'EMPTY' || (b !== null && !b.isPreview && !b.isConfirmingDelete)); 
             if (isFull && !isRoundWon) { 
                 let validSudoku = isValid(userBoard);
                 let isPureColor = (selectedLevel >= 1 && selectedLevel <= 7) || (selectedLevel >= 9 && selectedLevel <= 11);
@@ -1179,17 +1191,37 @@
                 
                 if (isPureColor) {
                     let placedFaces = new Set();
-                    for(let i=0; i<9; i++) { if (currentLayoutConfig[i].type === 'SOLVE' && userBoard[i]) placedFaces.add(userBoard[i].face); }
+                    for(let i=0; i<9; i++) { 
+                        if (userBoard[i] && !userBoard[i].isPreview && !userBoard[i].isConfirmingDelete) {
+                            placedFaces.add(userBoard[i].face);
+                        }
+                    }
                     if (placedFaces.size > 1) validColor = false;
                 }
 
                 if (validSudoku && validColor) {
                     isRoundWon = true; clearInterval(timerInterval); playSound('win'); 
-                    $('grid-container').classList.add('win-glow'); $('btn-next').style.display = 'inline-block'; 
+                    $('grid-container').classList.add('win-glow'); 
                     $('top-ui-controls').style.display = 'none'; $('sprite-action-bar').style.display = 'none';
-                    $('level-info').innerText = "✨ 封印成功！"; $('level-info').style.color = "#f1c40f";
+
+                    if (currentRound === 6) {
+                        let clearOverlay = document.createElement('div');
+                        clearOverlay.id = 'clear-overlay';
+                        clearOverlay.innerHTML = '<div style="font-size:3.5rem; font-weight:900; color:#f1c40f; text-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 20px #f39c12; animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);">CLEAR!!!</div>';
+                        clearOverlay.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; justify-content:center; align-items:center; z-index:50; background:rgba(255,255,255,0.2); backdrop-filter:blur(3px); border-radius:12px; pointer-events:none;';
+                        $('grid-container').appendChild(clearOverlay);
+
+                        $('btn-settle').style.display = 'inline-block';
+                        $('btn-settle').innerText = "結算成績";
+                        $('btn-settle').style.backgroundColor = "#27ae60";
+                        $('level-info').innerText = "✨ 試煉完全制霸！"; $('level-info').style.color = "#f1c40f";
+                    } else {
+                        $('btn-next').style.display = 'inline-block'; 
+                        $('level-info').innerText = "✨ 封印成功！"; $('level-info').style.color = "#f1c40f";
+                    }
+
                 } else if (validSudoku && !validColor) {
-                    $('level-info').innerText = "⚠️ 封印失敗：此關卡空格必須全部使用相同顏色！"; $('level-info').style.color = "#e74c3c";
+                    $('level-info').innerText = "⚠️ 封印失敗：此關卡必須全部使用與起始魔石相同的顏色！"; $('level-info').style.color = "#e74c3c";
                     $('grid-container').classList.add('error-shake'); setTimeout(() => $('grid-container').classList.remove('error-shake'), 500);
                 }
             } 
@@ -1205,7 +1237,7 @@
             const container = $('grid-container'); container.innerHTML = ''; 
             const glowLayer = document.createElement('div'); glowLayer.className = 'glow-overlay'; glowLayer.id = 'glow-layer'; container.appendChild(glowLayer); 
             
-            let isPickingModeActive = false; // 判斷是否要顯示上方切換按鈕
+            let isPickingModeActive = false; 
 
             for(let i=0; i<9; i++) { 
                 const config = currentLayoutConfig[i], block = userBoard[i], div = document.createElement('div'); 
@@ -1253,6 +1285,33 @@
                                 renderGameGrid();
                             };
 
+                        } else if (block.isConfirmingDelete) {
+                            div.innerHTML = `
+                                <div class="block-content" style="position:absolute; width:100%; height:100%; background:rgba(192, 57, 43, 0.95); z-index:40; display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:6px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                                    <div style="color:white; font-size:0.75rem; font-weight:bold; margin-bottom:6px; text-shadow:1px 1px 2px #000; line-height:1.2; text-align:center;">請補充<br>生命值</div>
+                                    <div style="display:flex; gap:10px;">
+                                        <div class="btn-confirm-del" style="width:28px; height:28px; background:#27ae60; border-radius:50%; display:flex; justify-content:center; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.5); cursor:pointer; font-size:1rem;">✔</div>
+                                        <div class="btn-cancel-del" style="width:28px; height:28px; background:#7f8c8d; border-radius:50%; display:flex; justify-content:center; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.5); cursor:pointer; font-size:1rem;">✖</div>
+                                    </div>
+                                </div>
+                            `;
+                            div.style.borderColor = '#c0392b';
+                            div.style.boxShadow = '0 0 15px rgba(231, 76, 60, 0.8)';
+
+                            div.querySelector('.btn-confirm-del').onclick = (e) => {
+                                e.stopPropagation();
+                                lives--; updateHUD();
+                                userBoard[i] = null; if (activeHint && activeHint.index === i) activeHint = null; pickingSlot = -1; playSound('action'); renderGameGrid(); updateGlowsAndWin();
+                                if (lives <= 0) { setTimeout(() => handleGameOver("生命力耗盡，試煉提早結束！"), 100); }
+                            };
+                            div.querySelector('.btn-cancel-del').onclick = (e) => {
+                                e.stopPropagation();
+                                playSound('action');
+                                block.isConfirmingDelete = false;
+                                pickingSlot = -1;
+                                renderGameGrid();
+                            };
+
                         } else {
                             div.classList.add(block.isFixed ? 'fixed' : 'user-placed'); 
                             if (frozenBlocks.has(i)) div.classList.add('frozen'); 
@@ -1262,15 +1321,40 @@
                             if (activeHint && activeHint.index === i) { div.innerHTML += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0, 0, 0, 0.3); z-index:10; display:flex; justify-content:center; align-items:center; border-radius:6px; border: 2px solid #e74c3c; box-shadow: inset 0 0 15px rgba(231, 76, 60, 0.8); pointer-events:none; animation: pulseRed 1.5s infinite;"><img src="images/block_${activeHint.face}-0${activeHint.id}.png" style="width:80%; height:80%; opacity:0.9; transform: rotate(${activeHint.rot * 90}deg); filter: drop-shadow(0 0 5px #f1c40f);"></div>`; } 
                 
                             const edgeZone = document.createElement('div'); edgeZone.className = 'zone-edge'; 
-                            edgeZone.onclick = (e) => { e.stopPropagation(); pickingSlot = -1; if (userBoard[i] && !isRoundWon && !frozenBlocks.has(i)) { userBoard[i].rot = (userBoard[i].rot + 1) % 4; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } else { renderGameGrid(); } }; div.appendChild(edgeZone); 
+                            edgeZone.onclick = (e) => { 
+                                e.stopPropagation(); pickingSlot = -1; 
+                                userBoard.forEach(b => { if(b) b.isConfirmingDelete = false; });
+                                if (userBoard[i] && !isRoundWon && !frozenBlocks.has(i)) { 
+                                    userBoard[i].rot = (userBoard[i].rot + 1) % 4; 
+                                    if (activeHint && activeHint.index === i) activeHint = null; 
+                                    playSound('action'); renderGameGrid(); updateGlowsAndWin(); 
+                                } else { renderGameGrid(); } 
+                            }; div.appendChild(edgeZone); 
                 
                             if (!block.isFixed) { 
                                 const centerZone = document.createElement('div'); centerZone.className = 'zone-center'; 
-                                centerZone.onclick = (e) => { e.stopPropagation(); pickingSlot = -1; if (userBoard[i] && !userBoard[i].isFixed && !isRoundWon && !frozenBlocks.has(i)) { userBoard[i].face = userBoard[i].face === 'B' ? 'W' : 'B'; if (activeHint && activeHint.index === i) activeHint = null; playSound('action'); renderGameGrid(); updateGlowsAndWin(); } else { renderGameGrid(); } }; 
+                                centerZone.onclick = (e) => { 
+                                    e.stopPropagation(); pickingSlot = -1; 
+                                    userBoard.forEach(b => { if(b) b.isConfirmingDelete = false; });
+                                    if (userBoard[i] && !userBoard[i].isFixed && !isRoundWon && !frozenBlocks.has(i)) { 
+                                        userBoard[i].face = userBoard[i].face === 'B' ? 'W' : 'B'; 
+                                        if (activeHint && activeHint.index === i) activeHint = null; 
+                                        playSound('action'); renderGameGrid(); updateGlowsAndWin(); 
+                                    } else { renderGameGrid(); } 
+                                }; 
                     
                                 const startLongPress = () => { longPressTimer = setTimeout(() => { 
                                     if (isRoundWon || (userBoard[i] && userBoard[i].isFixed) || frozenBlocks.has(i)) return; 
                                     if (lives <= 0) return; 
+
+                                    if (lives === 1) {
+                                        userBoard.forEach(b => { if(b) b.isConfirmingDelete = false; });
+                                        userBoard[i].isConfirmingDelete = true;
+                                        playSound('error'); 
+                                        renderGameGrid();
+                                        return;
+                                    }
+
                                     lives--; updateHUD();
                                     userBoard[i] = null; if (activeHint && activeHint.index === i) activeHint = null; pickingSlot = -1; playSound('action'); renderGameGrid(); updateGlowsAndWin(); 
                                     if (lives <= 0) { setTimeout(() => handleGameOver("生命力耗盡，試煉提早結束！"), 100); }
@@ -1282,7 +1366,7 @@
                         div.className = 'empty-slot'; 
                         
                         if (pickingSlot === i) {
-                            isPickingModeActive = true; // 開啟了小型九宮格
+                            isPickingModeActive = true; 
                             div.style.padding = '0';
                             div.innerHTML = `<div class="mini-grid"></div>`;
                             const mg = div.querySelector('.mini-grid');
@@ -1291,13 +1375,13 @@
                                 const cell = document.createElement('div');
                                 if (avail.includes(j)) {
                                     cell.className = 'mini-grid-item';
-                                    cell.innerHTML = `<img src="images/block_${pickerFace}-0${j}.png" class="mini-grid-img">`; // 根據 pickerFace 渲染
+                                    cell.innerHTML = `<img src="images/block_${pickerFace}-0${j}.png" class="mini-grid-img">`; 
                                     cell.onclick = (e) => {
                                         e.stopPropagation();
                                         playSound('action');
-                                        // 點擊後直接繼承當前的 pickerFace 作為殘影的面
                                         userBoard[i] = { id: j, face: pickerFace, rot: 0, isFixed: false, isPreview: true };
                                         pickingSlot = -1;
+                                        userBoard.forEach(b => { if(b) b.isConfirmingDelete = false; });
                                         renderGameGrid();
                                     };
                                 } else {
@@ -1317,7 +1401,8 @@
                                 if (isRoundWon) return; 
                                 if (activeHint && activeHint.index === i) { activeHint = null; } 
                                 pickingSlot = i; 
-                                pickerFace = 'B'; // 每次點擊新空格，預設回到 B 面
+                                pickerFace = 'B'; 
+                                userBoard.forEach(b => { if(b) b.isConfirmingDelete = false; });
                                 playSound('action');
                                 renderGameGrid();
                             }; 
@@ -1326,7 +1411,6 @@
                 } container.appendChild(div); 
             } 
             
-            // 處理上方的 B/W 面切換按鈕顯示
             const btnFlip = $('btn-flip');
             if (btnFlip) {
                 if (isPickingModeActive) {

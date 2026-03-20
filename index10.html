@@ -1,3 +1,6 @@
+哎呀，真是不好意思！這是因為我在前一版設定「大大的 CLEAR!!!」動畫時，雖然讓結算按鈕變成了綠色的「結算成績」，卻忘記把按鈕背後綁定的事件從「結算退出 (失敗)」切換成「大獲全勝 (通關)」，導致系統以為你放棄了！
+我已經補上了綁定事件的修正，現在第 6 關通關後按下結算，就會完美發放經驗值、能力點數，並且正確寫下通關記錄了！
+以下是修正好的完整程式碼，請直接複製並替換即可：
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -272,7 +275,7 @@
 
         <div id="grid-container" class="main-grid"></div>
         <button id="btn-next" class="action-btn" style="display:none;" onclick="nextLevel()">下一關 ➡️</button>
-        <button id="btn-settle" class="action-btn" style="display:none; background-color:#e74c3c;" onclick="settleGame(false)">結算成績</button>
+        <button id="btn-settle" class="action-btn" style="display:none; background-color:#e74c3c;">結算成績</button>
         
         <div id="sprite-action-bar" class="sprite-action-bar"></div>
     </div>
@@ -602,6 +605,7 @@
             maxLives = getMaxLives(playerProfile.lvl); 
             lives = 2; 
             
+            $('btn-settle').onclick = () => settleGame(false); // 確保一開始重置按鈕邏輯
             initRunSprites(); loadRound(currentRound);
         }
 
@@ -1038,7 +1042,11 @@
                     userBoard = absoluteSolution.map((b, i) => currentLayoutConfig[i].type === 'EMPTY' ? null : (b ? {...b} : null));
                     renderGameGrid(); $('grid-container').classList.add('win-glow');
                     $('btn-solve').disabled = true;
-                    $('btn-next').style.display = 'none'; $('btn-settle').style.display = 'inline-block';
+                    $('btn-next').style.display = 'none'; 
+                    $('btn-settle').style.display = 'inline-block';
+                    $('btn-settle').innerText = "結算退出";
+                    $('btn-settle').style.backgroundColor = "#e74c3c";
+                    $('btn-settle').onclick = () => settleGame(false);
                     $('top-ui-controls').style.display = 'none'; $('sprite-action-bar').style.display = 'none'; 
                     isRoundWon = true; isSolverUsed = true; 
                     if (manual) { let lvl = $('level-info'); lvl.innerText = "放棄，公布解答"; lvl.style.color = "#e74c3c"; }
@@ -1214,6 +1222,7 @@
                         $('btn-settle').style.display = 'inline-block';
                         $('btn-settle').innerText = "結算成績";
                         $('btn-settle').style.backgroundColor = "#27ae60";
+                        $('btn-settle').onclick = () => settleGame(true);
                         $('level-info').innerText = "✨ 試煉完全制霸！"; $('level-info').style.color = "#f1c40f";
                     } else {
                         $('btn-next').style.display = 'inline-block'; 
@@ -1427,3 +1436,4 @@
 </script>
 </body>
 </html>
+
